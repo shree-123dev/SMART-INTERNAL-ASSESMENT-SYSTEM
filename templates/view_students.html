@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Students | SIAMS</title>
+
+    <style>
+
+        body{
+            font-family:Arial,sans-serif;
+            background:#f4f7fc;
+            padding:30px;
+        }
+
+        h1{
+            text-align:center;
+            color:#1e3c72;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:30px;
+            background:white;
+        }
+
+        th,td{
+            border:1px solid #ddd;
+            padding:12px;
+            text-align:center;
+        }
+
+        th{
+            background:#1e3c72;
+            color:white;
+        }
+
+        tr:nth-child(even){
+            background:#f2f2f2;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<h1>Student List</h1>
+
+<table>
+
+<tr>
+    <th>USN</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Department</th>
+    <th>Semester</th>
+    <th>Section</th>
+</tr>
+
+{% for student in students %}
+
+<tr>
+
+<td>{{ student[0] }}</td>
+<td>{{ student[1] }}</td>
+<td>{{ student[2] }}</td>
+<td>{{ student[3] }}</td>
+<td>{{ student[4] }}</td>
+<td>{{ student[5] }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</body>
+</html>

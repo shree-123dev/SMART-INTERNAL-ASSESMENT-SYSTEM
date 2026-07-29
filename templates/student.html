@@ -1,29 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard | SIAMS</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SIAMS | Student Dashboard</title>
+
+    <link rel="stylesheet"
+    href="{{ url_for('static', filename='css/dashboard.css') }}">
+
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
 </head>
 
 <body>
 
-    <h1>Welcome to Student Dashboard</h1>
+<div class="sidebar">
 
-    <hr>
-
-    <h2>Student Panel</h2>
+    <h2>SIAMS</h2>
 
     <ul>
-        <li>📚 View Subjects</li>
-        <li>📝 Internal Assessments</li>
-        <li>📈 View Marks</li>
-        <li>📅 Attendance</li>
-        <li>👤 Profile</li>
-        <li><a href="/">Logout</a></li>
+
+        <li><i class="fas fa-home"></i> Dashboard</li>
+
+        <li><i class="fas fa-book"></i> Subjects</li>
+
+        <li><i class="fas fa-clipboard"></i> Internal Marks</li>
+
+        <li><i class="fas fa-calendar-check"></i> Attendance</li>
+
+        <li><i class="fas fa-chart-line"></i> Reports</li>
+
+        <li><i class="fas fa-user"></i> Profile</li>
+
+        <li><a href="/"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+
     </ul>
 
+</div>
+
+<div class="main-content">
+
+    <div class="topbar">
+        <h1>Welcome, Student 👋</h1>
+        <p>Smart Internal Assessment Management System</p>
+    </div>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>📚 Subjects</h3>
+            <p>6</p>
+        </div>
+
+        <div class="card">
+            <h3>📝 IA Average</h3>
+            <p>82%</p>
+        </div>
+
+        <div class="card">
+            <h3>📅 Attendance</h3>
+            <p>91%</p>
+        </div>
+
+        <div class="card">
+            <h3>🔔 Notifications</h3>
+            <p>3 New</p>
+        </div>
+
+    </div>
+
+    <div class="info-section">
+
+        <div class="student-profile">
+
+            <h2>👤 Student Profile</h2>
+
+            <p><strong>Name:</strong> Shreeram</p>
+
+            <p><strong>Department:</strong> Computer Science</p>
+
+            <p><strong>Semester:</strong> 5th Semester</p>
+
+            <p><strong>Roll No:</strong> CS23015</p>
+
+        </div>
+
+        <div class="notifications">
+
+            <h2>📢 Recent Notifications</h2>
+
+            <ul>
+                <li>IA-2 Marks Published</li>
+                <li>Attendance Updated</li>
+                <li>Assignment Submission on Friday</li>
+                <li>Department Meeting at 2:00 PM</li>
+            </ul>
+
+        </div>
+
+    </div>
+
+</div>
+
 </body>
+
 </html>

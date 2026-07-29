@@ -1,39 +1,190 @@
-body{
+/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+*{
     margin:0;
-    font-family:Poppins,sans-serif;
-    background:#f4f6f9;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
 }
 
-.header{
-    background:#1e3c72;
-    color:white;
-    padding:20px;
+body{
+    display:flex;
+    background:#eef2f7;
+}
+
+/* Sidebar */
+
+.sidebar{
+    width:250px;
+    height:100vh;
+    background:linear-gradient(180deg,#1e3c72,#2a5298);
+    color:#fff;
+    position:fixed;
+    padding:25px;
+}
+
+.sidebar h2{
     text-align:center;
+    margin-bottom:40px;
 }
 
-.container{
+.sidebar ul{
+    list-style:none;
+}
+
+.sidebar ul li{
+    padding:15px;
+    margin:10px 0;
+    border-radius:10px;
+    cursor:pointer;
+    transition:.3s;
+}
+
+.sidebar ul li:hover{
+    background:rgba(255,255,255,.15);
+}
+
+.sidebar ul li a{
+    color:white;
+    text-decoration:none;
+}
+
+.sidebar i{
+    margin-right:10px;
+}
+
+/* Main Content */
+
+.main-content{
+    margin-left:250px;
+    width:100%;
     padding:30px;
 }
 
+.topbar{
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+    margin-bottom:30px;
+}
+
+.topbar h1{
+    color:#1e3c72;
+}
+
+/* Cards */
+
 .cards{
-    display:flex;
-    gap:20px;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:25px;
 }
 
 .card{
     background:white;
-    width:220px;
-    padding:20px;
-    border-radius:12px;
-    box-shadow:0 5px 15px rgba(0,0,0,.1);
+    padding:25px;
+    border-radius:15px;
     text-align:center;
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+    transition:.3s;
+}
+
+.card:hover{
+    transform:translateY(-8px);
 }
 
 .card h3{
     color:#1e3c72;
+    margin-bottom:15px;
 }
 
 .card p{
+    font-size:28px;
+    font-weight:bold;
+    color:#333;
+}
+/* ===========================
+   Student Profile & Notifications
+=========================== */
+
+.info-section{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:25px;
+    margin-top:35px;
+}
+
+.student-profile,
+.notifications{
+    background:#ffffff;
+    padding:25px;
+    border-radius:15px;
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.student-profile h2,
+.notifications h2{
+    color:#1e3c72;
+    margin-bottom:20px;
+}
+
+.student-profile p{
+    margin:12px 0;
     color:#555;
+    font-size:16px;
+}
+
+.notifications ul{
+    list-style:none;
+}
+
+.notifications ul li{
+    padding:12px;
+    margin-bottom:10px;
+    background:#f5f8ff;
+    border-left:5px solid #2a5298;
+    border-radius:8px;
+    transition:.3s;
+}
+
+.notifications ul li:hover{
+    background:#e8f0ff;
+    transform:translateX(5px);
+}
+
+/* Responsive */
+
+@media(max-width:900px){
+
+    .info-section{
+        grid-template-columns:1fr;
+    }
+
+    .sidebar{
+        width:200px;
+    }
+
+    .main-content{
+        margin-left:200px;
+    }
+
+}
+
+@media(max-width:700px){
+
+    .sidebar{
+        display:none;
+    }
+
+    .main-content{
+        margin-left:0;
+        padding:20px;
+    }
+
+    .cards{
+        grid-template-columns:1fr;
+    }
+
 }

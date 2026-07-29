@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Subject | SIAMS</title>
+
+    <style>
+        body{
+            font-family:Arial, sans-serif;
+            background:#f4f7fc;
+        }
+
+        .container{
+            width:600px;
+            margin:40px auto;
+            background:white;
+            padding:30px;
+            border-radius:10px;
+            box-shadow:0 0 10px rgba(0,0,0,0.2);
+        }
+
+        h2{
+            text-align:center;
+            color:#1e3c72;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            margin:10px 0;
+        }
+
+        button{
+            width:100%;
+            padding:12px;
+            background:#1e3c72;
+            color:white;
+            border:none;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        button:hover{
+            background:#2a5298;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Add Subject</h2>
+
+<form action="/add_subject" method="POST">
+
+<input type="text"
+name="subject_code"
+placeholder="Subject Code"
+required>
+
+<input type="text"
+name="subject_name"
+placeholder="Subject Name"
+required>
+
+<input type="text"
+name="department"
+placeholder="Department"
+required>
+
+<input type="number"
+name="semester"
+placeholder="Semester"
+required>
+
+<input type="text"
+name="teacher_id"
+placeholder="Teacher ID"
+required>
+
+<button type="submit">
+Save Subject
+</button>
+
+</form>
+
+</div>
+
+</body>
+</html>
