@@ -194,7 +194,146 @@ def add_subject():
         return "Subject Added Successfully!"
 
     return render_template("add_subject.html")
+# ---------------- ADD TEACHER ----------------
+@app.route("/add_teacher", methods=["GET", "POST"])
+def add_teacher():
 
+    if request.method == "POST":
+
+        teacher_id = request.form["teacher_id"]
+        fullname = request.form["fullname"]
+        email = request.form["email"]
+        department = request.form["department"]
+
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+
+        try:
+
+            cursor.execute("""
+            INSERT INTO teachers
+            (teacher_id, fullname, email, department)
+            VALUES (?, ?, ?, ?)
+            """, (teacher_id, fullname, email, department))
+
+            conn.commit()
+
+        except sqlite3.IntegrityError:
+            return "Teacher already exists!"
+
+        finally:
+            conn.close()
+
+        return "Teacher Added Successfully!"
+
+    return render_template("add_teacher.html")
+# ---------------- VIEW TEACHERS ----------------
+@app.route("/view_teachers")
+def view_teachers():
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT teacher_id, fullname, email, department
+    FROM teachers
+    """)
+
+    teachers = cursor.fetchall()
+
+    conn.close()
+
+    return render_template(
+        "view_teachers.html",
+        teachers=teachers
+    )
+
+# ------------------ASSSIGN_SUBJECT--------------------
+@app.route("/assign_subject", methods=["GET", "POST"])
+def assign_subject():
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+
+        teacher_id = request.form["teacher_id"]
+        subject_code = request.form["subject_code"]
+
+        cursor.execute("""
+        INSERT INTO teacher_subjects
+        (teacher_id, subject_code)
+        VALUES (?, ?)
+        """, (teacher_id, subject_code))
+
+        conn.commit()
+        conn.close()
+
+        return "Subject Assigned Successfully!"
+
+    # Load teachers
+    cursor.execute("SELECT teacher_id, fullname FROM teachers")
+    teachers = cursor.fetchall()
+
+    # Load subjects
+    cursor.execute("SELECT subject_code, subject_name FROM subjects")
+    subjects = cursor.fetchall()
+
+    conn.close()
+
+    return render_template(
+        "assign_subject.html",
+        teachers=teachers,
+        subjects=subjects
+    )
+# ---------------- TEACHER SUBJECTS ----------------
+@app.route("/teacher_subjects/<teacher_id>")
+def teacher_subjects(teacher_id):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT subjects.subject_code,
+           subjects.subject_name
+    FROM teacher_subjects
+    JOIN subjects
+    ON teacher_subjects.subject_code = subjects.subject_code
+    WHERE teacher_subjects.teacher_id = ?
+    """, (teacher_id,))
+
+    subjects = cursor.fetchall()
+
+    conn.close()
+
+    return render_template(
+        "teacher_subjects.html",
+        subjects=subjects
+    )
+# ---------------- PRACTICAL SESSION ----------------
+from datetime import date
+
+@app.route("/practical_session/<subject_code>")
+def practical_session(subject_code):
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT subject_name
+    FROM subjects
+    WHERE subject_code = ?
+    """, (subject_code,))
+
+    subject = cursor.fetchone()
+
+    conn.close()
+
+    return render_template(
+        "practical_session.html",
+        subject_name=subject[0],
+        today=date.today()
+    )
 
 # ---------------- ADMIN ----------------
 @app.route("/admin")

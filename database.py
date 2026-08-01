@@ -67,6 +67,13 @@ def init_db():
         practical REAL DEFAULT 0
     )
     """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS teacher_subjects(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id TEXT NOT NULL,
+        subject_code TEXT NOT NULL
+    )
+    """)
 
 
     conn.commit()

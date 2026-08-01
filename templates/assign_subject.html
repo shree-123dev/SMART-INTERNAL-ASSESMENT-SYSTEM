@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Assign Subject</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f7fc;
+}
+
+.container{
+width:600px;
+margin:40px auto;
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,.2);
+}
+
+h2{
+text-align:center;
+color:#1e3c72;
+}
+
+input,
+select{
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+    border:1px solid #ccc;
+    border-radius:5px;
+    font-size:16px;
+}
+
+button{
+width:100%;
+padding:12px;
+background:#1e3c72;
+color:white;
+border:none;
+font-size:16px;
+cursor:pointer;
+}
+
+button:hover{
+background:#2a5298;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Assign Subject To Teacher</h2>
+
+<form action="/assign_subject" method="POST">
+
+<label><b>Select Teacher</b></label>
+
+<select name="teacher_id" required>
+
+<option value="">-- Select Teacher --</option>
+
+{% for teacher in teachers %}
+
+<option value="{{ teacher[0] }}">
+    {{ teacher[1] }} ({{ teacher[0] }})
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<label><b>Select Subject</b></label>
+
+<select name="subject_code" required>
+
+<option value="">-- Select Subject --</option>
+
+{% for subject in subjects %}
+
+<option value="{{ subject[0] }}">
+    {{ subject[1] }} ({{ subject[0] }})
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<button type="submit">
+
+Assign Subject
+
+</button>
+
+</form>
+
+</div>
+
+</body>
+</html>

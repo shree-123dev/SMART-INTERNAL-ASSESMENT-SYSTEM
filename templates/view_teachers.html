@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Teachers</title>
+
+    <style>
+
+        body{
+            font-family:Arial;
+            background:#f4f7fc;
+            padding:30px;
+        }
+
+        h2{
+            text-align:center;
+            color:#1e3c72;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            background:white;
+        }
+
+        th,td{
+            border:1px solid #ddd;
+            padding:12px;
+            text-align:center;
+        }
+
+        th{
+            background:#1e3c72;
+            color:white;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<h2>Teacher List</h2>
+
+<table>
+
+<tr>
+
+<th>Teacher ID</th>
+<th>Name</th>
+<th>Email</th>
+<th>Department</th>
+
+</tr>
+
+{% for teacher in teachers %}
+
+<tr>
+
+<td>{{ teacher[0] }}</td>
+<td>{{ teacher[1] }}</td>
+<td>{{ teacher[2] }}</td>
+<td>{{ teacher[3] }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</body>
+</html>
