@@ -1,8 +1,13 @@
-from flask import Flask, render_template, request, redirect
+from generate_qr import generate_student_qr
+from flask import Flask, render_template, request, redirect,session
 import sqlite3
+import qrcode
+import json
+
 from database import init_db
 
 app = Flask(__name__)
+app.secret_key = "siams_secret_key_2026"
 
 # ---------------- HOME PAGE ----------------
 @app.route("/")
@@ -23,7 +28,7 @@ def login():
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT role FROM users WHERE email=? AND password=?",
+            "SELECT fullname,email  role FROM users WHERE email=? AND password=?",
             (email, password)
         )
 
@@ -32,7 +37,10 @@ def login():
 
         if user:
 
-            role = user[0]
+            role = user[2]
+            session["fullname"] = user[0]
+            session["email"] = user[1]
+            session["role"] = user[2]
 
             if role == "student":
                 return redirect("/student")
@@ -96,8 +104,32 @@ def dashboard():
 # ---------------- STUDENT ----------------
 @app.route("/student")
 def student():
-    return render_template("student.html")
 
+    email = session["email"]
+
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT usn,
+           fullname,
+           email,
+           department,
+           semester,
+           section,
+           qr_path
+    FROM students
+    WHERE email = ?
+    """, (email,))
+
+    student = cursor.fetchone()
+
+    conn.close()
+
+    return render_template(
+        "student.html",
+        student=student
+    )
 
 # ---------------- TEACHER ----------------
 @app.route("/teacher")
@@ -130,6 +162,21 @@ def add_student():
             """, (usn, fullname, email, department, semester, section))
 
             conn.commit()
+            qr_path=generate_student_qr(
+                usn,
+                fullname,
+                department,
+                semester
+            )
+            cursor.execute("""
+            UPDATE students
+            SET qr_path = ?
+            WHERE usn = ?
+            """, (qr_path, usn))
+
+            conn.commit()
+
+            conn.close()
 
         except sqlite3.IntegrityError:
             return "Student already exists!"

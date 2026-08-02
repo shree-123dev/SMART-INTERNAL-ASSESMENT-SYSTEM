@@ -22,7 +22,8 @@ def init_db():
         email TEXT UNIQUE NOT NULL,
         department TEXT NOT NULL,
         semester INTEGER NOT NULL,
-        section TEXT NOT NULL
+        section TEXT NOT NULL,
+        qr_path TEXT
     )
     """)
     cursor.execute("""
