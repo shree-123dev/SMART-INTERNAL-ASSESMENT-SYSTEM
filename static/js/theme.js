@@ -1,5 +1,5 @@
 /* =========================================================
-   SIAMS — Main Interactive Script & Theme Switcher
+   SIAMS — Theme Switcher (Dark Mode / Light Mode)
    ========================================================= */
 
 (function () {
@@ -32,7 +32,7 @@
     }
 
     // 2. Ensure floating toggle button exists on every page
-    function initTheme() {
+    document.addEventListener('DOMContentLoaded', function () {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
         
         // If no floating toggle exists, insert one
@@ -49,18 +49,11 @@
 
         // Attach listeners to any static theme toggle buttons
         document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
-            btn.removeEventListener('click', toggleTheme);
             btn.addEventListener('click', toggleTheme);
         });
 
         updateToggleIcons(currentTheme);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTheme);
-    } else {
-        initTheme();
-    }
+    });
 
     // Expose toggle function globally
     window.toggleSIAMSTheme = toggleTheme;

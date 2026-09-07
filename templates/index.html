@@ -34,6 +34,11 @@
             <li><a href="#features">Features</a></li>
             <li><a href="#how-it-works">How It Works</a></li>
             <li><a href="{{ url_for('about') }}">About</a></li>
+            <li style="display: flex; align-items: center;">
+                <button class="theme-toggle-btn" title="Toggle Dark/Light Mode" type="button">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </li>
             <li>
                 <a href="{{ url_for('login') }}" class="nav-btn">
                     <i class="fas fa-sign-in-alt"></i> Login Portal
