@@ -1,1 +1,236 @@
-<h1>About project</h1>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .about-hero {
+            padding: 140px 8% 60px;
+            background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+            text-align: center;
+        }
+
+        .about-hero h1 {
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--dark);
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            max-width: 1100px;
+            margin: 40px auto 0;
+        }
+
+        .team-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 30px 24px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .team-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .team-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: var(--radius-full);
+            background: linear-gradient(135deg, #4f46e5, #3b82f6);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin: 0 auto 18px;
+            box-shadow: 0 6px 16px var(--primary-glow);
+        }
+
+        .team-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .team-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .tech-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            padding: 8px 18px;
+            border-radius: var(--radius-full);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 6px;
+            box-shadow: var(--shadow-sm);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+    <nav class="navbar">
+        <a href="{{ url_for('home') }}" class="logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SIAMS Logo">
+            <div class="logo-text">
+                <h2>SIAMS</h2>
+                <span>Smart Assessment</span>
+            </div>
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('home') }}#features">Features</a></li>
+            <li><a href="{{ url_for('about') }}" style="color: var(--primary);">About</a></li>
+            <li>
+                <a href="{{ url_for('login') }}" class="nav-btn">
+                    <i class="fas fa-sign-in-alt"></i> Login Portal
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- ================= ABOUT HERO ================= -->
+    <section class="about-hero">
+        <span class="tag" style="margin: 0 auto 16px;">
+            <i class="fas fa-info-circle"></i> About SIAMS Project
+        </span>
+        <h1>Smart Internal Assessment & Management System</h1>
+        <p style="max-width: 700px; margin: 0 auto; font-size: 17px; color: var(--text-muted);">
+            SIAMS is a web-based educational ERP developed to automate Continuous Internal Evaluation (CIE), student attendance, practical marks, and automated grade reporting for higher education institutions.
+        </p>
+    </section>
+
+    <!-- ================= DETAILS ================= -->
+    <section class="features" style="padding-top: 40px;">
+        <div class="page-container" style="max-width: 1100px;">
+            
+            <div class="form-card" style="margin-bottom: 40px;">
+                <h2 style="color: var(--dark); font-size: 24px; margin-bottom: 16px;">
+                    🎯 Problem Statement & Institutional Vision
+                </h2>
+                <p style="color: var(--text-muted); line-height: 1.8; margin-bottom: 20px;">
+                    Traditional manual internal assessment processes rely heavily on paper records and disconnected spreadsheets. This workflow causes substantial administrative delays, human calculation errors, loss of continuous evaluation records, and delayed feedback to students.
+                </p>
+                <p style="color: var(--text-muted); line-height: 1.8;">
+                    <strong>SIAMS solves this problem by providing:</strong>
+                </p>
+                <div class="form-grid-2" style="margin-top: 20px;">
+                    <div style="background: var(--bg-main); padding: 18px; border-radius: var(--radius-md);">
+                        <h4 style="color: var(--primary); margin-bottom: 6px;"><i class="fas fa-bolt"></i> Real-Time Evaluation</h4>
+                        <p style="font-size: 13px; color: var(--text-muted);">Instant recording of marks during laboratory practicals and tutorials.</p>
+                    </div>
+                    <div style="background: var(--bg-main); padding: 18px; border-radius: var(--radius-md);">
+                        <h4 style="color: var(--accent); margin-bottom: 6px;"><i class="fas fa-qrcode"></i> Contactless QR Attendance</h4>
+                        <p style="font-size: 13px; color: var(--text-muted);">Accurate attendance logging with encrypted student QR identities.</p>
+                    </div>
+                    <div style="background: var(--bg-main); padding: 18px; border-radius: var(--radius-md);">
+                        <h4 style="color: var(--secondary); margin-bottom: 6px;"><i class="fas fa-chart-line"></i> Performance Analytics</h4>
+                        <p style="font-size: 13px; color: var(--text-muted);">Comprehensive reports on student academic progress and subject averages.</p>
+                    </div>
+                    <div style="background: var(--bg-main); padding: 18px; border-radius: var(--radius-md);">
+                        <h4 style="color: var(--warning); margin-bottom: 6px;"><i class="fas fa-leaf"></i> 100% Eco-Friendly & Paperless</h4>
+                        <p style="font-size: 13px; color: var(--text-muted);">Zero paper waste with instant cloud-ready digital records.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Members -->
+            <div style="text-align: center; margin-bottom: 50px;">
+                <span class="section-badge">Development Team</span>
+                <h2 style="font-size: 30px; font-weight: 800; color: var(--dark); margin-bottom: 10px;">Core Engineering Team</h2>
+                <p style="color: var(--text-muted);">Dedicated computer science students engineering the future of campus assessments.</p>
+
+                <div class="team-grid">
+                    <div class="team-card">
+                        <div class="team-avatar">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <h3>Shreeram Adhari</h3>
+                        <p>USN: VU2F2425005</p>
+                        <span class="badge badge-primary" style="margin-top: 10px;">Lead Developer</span>
+                    </div>
+
+                    <div class="team-card">
+                        <div class="team-avatar" style="background: linear-gradient(135deg, #10b981, #06b6d4);">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h3>Sakshi Kumbhar</h3>
+                        <p>USN: VU2F2425003</p>
+                        <span class="badge badge-success" style="margin-top: 10px;">System Architect</span>
+                    </div>
+
+                    <div class="team-card">
+                        <div class="team-avatar" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h3>Nidhi Ghume</h3>
+                        <p>USN: VU2F2425018</p>
+                        <span class="badge badge-secondary" style="margin-top: 10px;">Database & Testing</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tech Stack -->
+            <div class="form-card" style="text-align: center;">
+                <h3 style="font-size: 20px; font-weight: 700; color: var(--dark); margin-bottom: 20px;">
+                    🛠️ Technologies & Tools Powering SIAMS
+                </h3>
+                <div>
+                    <span class="tech-pill"><i class="fab fa-python" style="color: #3b82f6;"></i> Python 3</span>
+                    <span class="tech-pill"><i class="fas fa-pepper-hot" style="color: #ef4444;"></i> Flask Web Framework</span>
+                    <span class="tech-pill"><i class="fas fa-database" style="color: #10b981;"></i> SQLite Database</span>
+                    <span class="tech-pill"><i class="fab fa-html5" style="color: #ea580c;"></i> HTML5 Semantic Structure</span>
+                    <span class="tech-pill"><i class="fab fa-css3-alt" style="color: #2563eb;"></i> CSS3 Design Tokens</span>
+                    <span class="tech-pill"><i class="fab fa-js" style="color: #eab308;"></i> Modern JavaScript</span>
+                    <span class="tech-pill"><i class="fas fa-qrcode" style="color: #7c3aed;"></i> Dynamic QR Engine</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer>
+        <div class="footer-bottom" style="border: none; padding-top: 0;">
+            <p>© 2026 SIAMS. All Rights Reserved. Smart Internal Assessment Management System.</p>
+            <p><a href="{{ url_for('home') }}" style="color: #60a5fa;">Back to Home →</a></p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

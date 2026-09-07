@@ -1,10 +1,11 @@
-from generate_qr import generate_student_qr
-from flask import Flask, render_template, request, redirect,session
+from datetime import date
+from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import qrcode
 import json
 
 from database import init_db
+from generate_qr import generate_student_qr
 
 app = Flask(__name__)
 app.secret_key = "siams_secret_key_2026"
@@ -28,7 +29,7 @@ def login():
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT fullname,email  role FROM users WHERE email=? AND password=?",
+            "SELECT fullname, email, role FROM users WHERE email=? AND password=?",
             (email, password)
         )
 
@@ -105,6 +106,9 @@ def dashboard():
 @app.route("/student")
 def student():
 
+    if "email" not in session:
+        return redirect("/login")
+
     email = session["email"]
 
     conn = sqlite3.connect("database.db")
@@ -175,8 +179,6 @@ def add_student():
             """, (qr_path, usn))
 
             conn.commit()
-
-            conn.close()
 
         except sqlite3.IntegrityError:
             return "Student already exists!"
@@ -358,8 +360,6 @@ def teacher_subjects(teacher_id):
         subjects=subjects
     )
 # ---------------- PRACTICAL SESSION ----------------
-from datetime import date
-
 @app.route("/practical_session/<subject_code>")
 def practical_session(subject_code):
 
@@ -375,6 +375,9 @@ def practical_session(subject_code):
     subject = cursor.fetchone()
 
     conn.close()
+
+    if not subject:
+        return "Subject not found", 404
 
     return render_template(
         "practical_session.html",

@@ -1,92 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Subject | SIAMS</title>
+    <title>Create Subject | SIAMS</title>
 
-    <style>
-        body{
-            font-family:Arial, sans-serif;
-            background:#f4f7fc;
-        }
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-        .container{
-            width:600px;
-            margin:40px auto;
-            background:white;
-            padding:30px;
-            border-radius:10px;
-            box-shadow:0 0 10px rgba(0,0,0,0.2);
-        }
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        h2{
-            text-align:center;
-            color:#1e3c72;
-        }
-
-        input{
-            width:100%;
-            padding:12px;
-            margin:10px 0;
-        }
-
-        button{
-            width:100%;
-            padding:12px;
-            background:#1e3c72;
-            color:white;
-            border:none;
-            cursor:pointer;
-            font-size:16px;
-        }
-
-        button:hover{
-            background:#2a5298;
-        }
-    </style>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
-<body>
+<body class="auth-body">
 
-<div class="container">
+    <div class="auth-container" style="max-width: 600px;">
+        <div class="auth-box" style="padding: 40px 35px;">
 
-<h2>Add Subject</h2>
+            <div class="auth-header">
+                <div class="auth-logo" style="background: #fef3c7; color: #d97706;">
+                    <i class="fas fa-book-open" style="font-size: 24px;"></i>
+                </div>
+                <h2>Create Academic Subject</h2>
+                <p>Register new curriculum subject & practical laboratory course</p>
+            </div>
 
-<form action="/add_subject" method="POST">
+            <form action="/add_subject" method="POST">
 
-<input type="text"
-name="subject_code"
-placeholder="Subject Code"
-required>
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
+                    <div class="form-group">
+                        <label for="subject_code">Subject Code</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-code"></i>
+                            <input
+                                type="text"
+                                id="subject_code"
+                                name="subject_code"
+                                class="form-control"
+                                placeholder="e.g. 21CS52"
+                                required>
+                        </div>
+                    </div>
 
-<input type="text"
-name="subject_name"
-placeholder="Subject Name"
-required>
+                    <div class="form-group">
+                        <label for="subject_name">Subject Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-book"></i>
+                            <input
+                                type="text"
+                                id="subject_name"
+                                name="subject_name"
+                                class="form-control"
+                                placeholder="e.g. Database Management Systems"
+                                required>
+                        </div>
+                    </div>
+                </div>
 
-<input type="text"
-name="department"
-placeholder="Department"
-required>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-building-columns"></i>
+                            <input
+                                type="text"
+                                id="department"
+                                name="department"
+                                class="form-control"
+                                placeholder="e.g. Computer Science"
+                                required>
+                        </div>
+                    </div>
 
-<input type="number"
-name="semester"
-placeholder="Semester"
-required>
+                    <div class="form-group">
+                        <label for="semester">Semester</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-layer-group"></i>
+                            <input
+                                type="number"
+                                id="semester"
+                                name="semester"
+                                class="form-control"
+                                placeholder="e.g. 5"
+                                min="1"
+                                max="8"
+                                required>
+                        </div>
+                    </div>
+                </div>
 
-<input type="text"
-name="teacher_id"
-placeholder="Teacher ID"
-required>
+                <div class="form-group">
+                    <label for="teacher_id">Assigned Lead Teacher ID</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <input
+                            type="text"
+                            id="teacher_id"
+                            name="teacher_id"
+                            class="form-control"
+                            placeholder="e.g. TCH101 or Faculty ID"
+                            required>
+                    </div>
+                </div>
 
-<button type="submit">
-Save Subject
-</button>
+                <div style="margin-top: 24px;">
+                    <button type="submit" class="auth-btn" style="background: linear-gradient(135deg, #d97706, #b45309);">
+                        <i class="fas fa-plus-circle" style="margin-right: 8px;"></i> Save Subject to Catalog
+                    </button>
+                </div>
 
-</form>
+            </form>
 
-</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <a href="{{ url_for('assign_subject') }}" style="color: #d97706; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-link"></i> Map to Teachers
+                </a>
+                <a href="{{ url_for('admin') }}" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+
+        </div>
+    </div>
 
 </body>
 </html>

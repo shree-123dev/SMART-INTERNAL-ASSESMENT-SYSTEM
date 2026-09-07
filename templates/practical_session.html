@@ -1,75 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practical Evaluation Session | SIAMS</title>
 
-<title>Practical Session</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-<style>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-body{
-font-family:Arial;
-background:#f4f7fc;
-padding:40px;
-text-align:center;
-}
-
-.container{
-
-background:white;
-padding:30px;
-width:600px;
-margin:auto;
-border-radius:10px;
-box-shadow:0 0 10px rgba(0,0,0,.2);
-
-}
-
-h2{
-color:#1e3c72;
-}
-
-button{
-
-padding:15px 30px;
-font-size:18px;
-background:#28a745;
-color:white;
-border:none;
-border-radius:5px;
-cursor:pointer;
-
-}
-
-button:hover{
-
-background:#218838;
-
-}
-
-</style>
-
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
-<body>
+<body style="background: var(--bg-main);">
 
-<div class="container">
+    <div style="max-width: 800px; margin: 50px auto; padding: 0 24px;">
 
-<h2>Practical Session</h2>
+        <!-- Main Cockpit Card -->
+        <div style="background: white; border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-xl); padding: 40px; text-align: center;">
 
-<h3>{{ subject_name }}</h3>
+            <!-- Header Badge -->
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; color: #059669; padding: 6px 16px; border-radius: var(--radius-full); font-size: 13px; font-weight: 700; margin-bottom: 24px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
+                LABORATORY EVALUATION COCKPIT
+            </div>
 
-<p>Date : {{ today }}</p>
+            <h1 style="font-size: 32px; font-weight: 800; color: var(--dark); margin-bottom: 12px; letter-spacing: -0.5px;">
+                {{ subject_name }}
+            </h1>
 
-<br>
+            <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 32px;">
+                Session Date: <strong style="color: var(--dark);">{{ today }}</strong>
+            </p>
 
-<button>
+            <!-- Scanner Visual Placeholder Box -->
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 40px 20px; color: white; margin-bottom: 32px; position: relative; overflow: hidden; border: 1px solid #334155;">
+                <div style="width: 100px; height: 100px; margin: 0 auto 20px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 38px; color: #38bdf8;">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">QR Attendance & Evaluation Ready</h3>
+                <p style="color: #94a3b8; font-size: 14px; max-width: 480px; margin: 0 auto;">
+                    Launch camera sensor to scan student identity QR codes for instant attendance confirmation and practical mark entry.
+                </p>
+            </div>
 
-📷 Start QR Attendance
+            <!-- Action Buttons -->
+            <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+                <button class="btn btn-success" style="padding: 14px 32px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-camera"></i> Start QR Attendance Scanner
+                </button>
+                <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="padding: 14px 28px; font-size: 16px; font-weight: 600; border-radius: var(--radius-md); display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-arrow-left"></i> Exit Session
+                </a>
+            </div>
 
-</button>
+        </div>
 
-</div>
+    </div>
 
 </body>
-
 </html>

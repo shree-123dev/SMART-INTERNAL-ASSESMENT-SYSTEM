@@ -1,34 +1,214 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Teacher Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body>
 
-<h1>Teacher Dashboard</h1>
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar">
+        <a href="{{ url_for('teacher') }}" class="sidebar-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SIAMS Logo">
+            <h2>SIAMS</h2>
+        </a>
 
-<hr>
+        <ul class="sidebar-nav">
+            <li class="active">
+                <a href="{{ url_for('teacher') }}"><i class="fas fa-chalkboard-teacher"></i> Faculty Home</a>
+            </li>
+            <li>
+                <a href="{{ url_for('view_students') }}"><i class="fas fa-user-graduate"></i> Student Records</a>
+            </li>
+            <li>
+                <a href="{{ url_for('add_student') }}"><i class="fas fa-user-plus"></i> Enroll Student</a>
+            </li>
+            <li>
+                <a href="{{ url_for('view_teachers') }}"><i class="fas fa-users"></i> Department Faculty</a>
+            </li>
+            <li>
+                <a href="{{ url_for('assign_subject') }}"><i class="fas fa-link"></i> Subject Mapping</a>
+            </li>
+        </ul>
 
-<h3>Menu</h3>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('home') }}">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </aside>
 
-<ul>
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-content">
 
-    <li><a href="/add_student">➕ Add Student</a></li>
-    <li><a href="/view_students">👨‍🎓 View Students</a></li>
-    <li><a href="/add_subject">📚 Add Subject</a></li>
-    <li><a href="/add_teacher">👨‍🏫 Add Teacher</a></li>
-    <li><a href="/view_teachers">👨‍🏫 View Teachers</a></li>
-    <li><a href="/assign_subject">📖 Assign Subject</a></li>
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1>Faculty Evaluation Portal 👨‍🏫</h1>
+                <p>Manage coursework, lab sessions, and continuous student evaluations</p>
+            </div>
 
+            <div class="topbar-right">
+                <div class="user-badge">
+                    <div class="user-avatar" style="background: #0284c7;">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div>
+                        <div class="user-info">Faculty Member</div>
+                        <span class="user-role-pill role-teacher">Teacher</span>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-    <li>Scan QR Attendance</li>
+        <!-- Stats Overview Cards -->
+        <section class="cards-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Teaching Load</h3>
+                    <div class="stat-value">Assigned</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-book-reader"></i>
+                </div>
+            </div>
 
-    <li>Enter Practical Marks</li>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>QR Attendance</h3>
+                    <div class="stat-value" style="color: #10b981;">Enabled</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+            </div>
 
-    <li>Generate Report</li>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Lab Evaluation</h3>
+                    <div class="stat-value">Active</div>
+                </div>
+                <div class="stat-icon icon-sky">
+                    <i class="fas fa-flask"></i>
+                </div>
+            </div>
 
-</ul>python <app class="py"></app>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>IA Assessment</h3>
+                    <div class="stat-value">Continuous</div>
+                </div>
+                <div class="stat-icon icon-amber">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Management Actions -->
+        <h2 style="font-size: 20px; font-weight: 800; color: var(--dark-sidebar); margin-bottom: 16px;">
+            📚 Academic Operations & Student Management
+        </h2>
+
+        <section class="action-grid">
+            <a href="{{ url_for('add_student') }}" class="action-tile">
+                <div class="action-tile-icon icon-blue">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add Student</h4>
+                    <p>Register new student and generate QR code</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('view_students') }}" class="action-tile">
+                <div class="action-tile-icon icon-sky">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>View Students</h4>
+                    <p>Browse student roster, semester & sections</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('add_subject') }}" class="action-tile">
+                <div class="action-tile-icon icon-green">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add Subject</h4>
+                    <p>Create new subject codes and syllabus modules</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('assign_subject') }}" class="action-tile">
+                <div class="action-tile-icon icon-purple">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Assign Subject</h4>
+                    <p>Map subjects to specific faculty teachers</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('add_teacher') }}" class="action-tile">
+                <div class="action-tile-icon icon-amber">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add Teacher</h4>
+                    <p>Register new faculty colleague into system</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('view_teachers') }}" class="action-tile">
+                <div class="action-tile-icon icon-blue">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>View Teachers</h4>
+                    <p>Check department faculty directory</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+        </section>
+
+        <!-- Practical Session Notice Banner -->
+        <div class="dashboard-card" style="background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; border: none; margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 20px;">
+                <div>
+                    <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px;">
+                        🔬 Practical Lab Sessions & QR Attendance
+                    </h3>
+                    <p style="font-size: 14px; opacity: 0.9; max-width: 650px;">
+                        To start a live practical lab session, take attendance with QR codes, or evaluate lab rubrics, navigate to your assigned subjects mapping.
+                    </p>
+                </div>
+                <a href="{{ url_for('assign_subject') }}" class="action-btn action-btn-success" style="padding: 12px 22px; font-size: 15px; border-radius: 8px;">
+                    <i class="fas fa-external-link-alt"></i> Manage Assigned Subjects
+                </a>
+            </div>
+        </div>
+
+    </main>
 
 </body>
+
 </html>

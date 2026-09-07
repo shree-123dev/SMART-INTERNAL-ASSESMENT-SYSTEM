@@ -1,1 +1,253 @@
-<h1>admin dashboard</h1>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar">
+        <a href="{{ url_for('admin') }}" class="sidebar-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SIAMS Logo">
+            <h2>SIAMS</h2>
+        </a>
+
+        <ul class="sidebar-nav">
+            <li class="active">
+                <a href="{{ url_for('admin') }}"><i class="fas fa-th-large"></i> Admin Hub</a>
+            </li>
+            <li>
+                <a href="{{ url_for('view_students') }}"><i class="fas fa-user-graduate"></i> Students Directory</a>
+            </li>
+            <li>
+                <a href="{{ url_for('view_teachers') }}"><i class="fas fa-chalkboard-teacher"></i> Faculty Directory</a>
+            </li>
+            <li>
+                <a href="{{ url_for('add_subject') }}"><i class="fas fa-book"></i> Subjects Catalog</a>
+            </li>
+            <li>
+                <a href="{{ url_for('assign_subject') }}"><i class="fas fa-tasks"></i> Assign Subject</a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <a href="{{ url_for('home') }}">
+                <i class="fas fa-sign-out-alt"></i> Logout System
+            </a>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-content">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1>Administrator Control Center 🛡️</h1>
+                <p>Campus ERP Infrastructure & Academic Management</p>
+            </div>
+
+            <div class="topbar-right">
+                <div class="user-badge">
+                    <div class="user-avatar" style="background: #d97706;">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <div class="user-info">Master Administrator</div>
+                        <span class="user-role-pill role-admin">System Admin</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Overview Cards -->
+        <section class="cards-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Student Roster</h3>
+                    <div class="stat-value">Active</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Faculty Members</h3>
+                    <div class="stat-value">Verified</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Course Curriculum</h3>
+                    <div class="stat-value">Configured</div>
+                </div>
+                <div class="stat-icon icon-sky">
+                    <i class="fas fa-book-open"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Database Status</h3>
+                    <div class="stat-value" style="color: #10b981; font-size: 24px;">SQLite Connected</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-database"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Action Grid -->
+        <h2 style="font-size: 20px; font-weight: 800; color: var(--dark-sidebar); margin-bottom: 16px;">
+            ⚡ Quick Management Operations
+        </h2>
+
+        <section class="action-grid">
+            <a href="{{ url_for('add_student') }}" class="action-tile">
+                <div class="action-tile-icon icon-blue">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add New Student</h4>
+                    <p>Register student & generate instant QR identity</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('view_students') }}" class="action-tile">
+                <div class="action-tile-icon icon-sky">
+                    <i class="fas fa-address-book"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>View Student Directory</h4>
+                    <p>Explore all registered student records & batches</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('add_teacher') }}" class="action-tile">
+                <div class="action-tile-icon icon-green">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add New Faculty</h4>
+                    <p>Create faculty account & assign departments</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('view_teachers') }}" class="action-tile">
+                <div class="action-tile-icon icon-purple">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>View Faculty List</h4>
+                    <p>Inspect department faculty & course loads</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('add_subject') }}" class="action-tile">
+                <div class="action-tile-icon icon-amber">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add Course Subject</h4>
+                    <p>Register subject codes, semesters & departments</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('assign_subject') }}" class="action-tile">
+                <div class="action-tile-icon icon-blue">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Assign Subject Mapping</h4>
+                    <p>Map course subjects to authorized faculty teachers</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+        </section>
+
+        <!-- System Summary Grid -->
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3><i class="fas fa-info-circle" style="color: var(--primary);"></i> SIAMS System Overview</h3>
+                </div>
+                <div class="profile-detail-list">
+                    <div class="profile-detail-item">
+                        <span>Institution ERP</span>
+                        <span>SIAMS v1.0 Production</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>Database Engine</span>
+                        <span>SQLite 3 (database.db)</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>QR Attendance Engine</span>
+                        <span>Active (PNG Matrix)</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>Security Level</span>
+                        <span>Role-Based Authentication</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3><i class="fas fa-shield-alt" style="color: #10b981;"></i> Administrative Quick Links</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <a href="{{ url_for('teacher') }}" class="action-tile" style="padding: 14px 18px; margin-bottom: 0;">
+                        <div class="action-tile-icon icon-green" style="width: 38px; height: 38px; font-size: 16px;">
+                            <i class="fas fa-chalkboard"></i>
+                        </div>
+                        <div class="action-tile-text">
+                            <h4>Switch to Teacher Dashboard</h4>
+                            <p>Test teacher practical sessions</p>
+                        </div>
+                        <i class="fas fa-arrow-right action-tile-arrow"></i>
+                    </a>
+
+                    <a href="{{ url_for('home') }}" class="action-tile" style="padding: 14px 18px; margin-bottom: 0;">
+                        <div class="action-tile-icon icon-blue" style="width: 38px; height: 38px; font-size: 16px;">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                        <div class="action-tile-text">
+                            <h4>Visit Main Landing Page</h4>
+                            <p>Open public portal showcase</p>
+                        </div>
+                        <i class="fas fa-arrow-right action-tile-arrow"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+
+</html>

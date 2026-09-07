@@ -2,111 +2,217 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal | SIAMS</title>
 
-    <title>SIAMS | Student Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 
-    <link rel="stylesheet"
-    href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body>
 
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar">
+        <a href="{{ url_for('student') }}" class="sidebar-brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SIAMS Logo">
+            <h2>SIAMS</h2>
+        </a>
 
-<div class="sidebar">
+        <ul class="sidebar-nav">
+            <li class="active">
+                <a href="{{ url_for('student') }}"><i class="fas fa-home"></i> Student Home</a>
+            </li>
+            <li>
+                <a href="#profile"><i class="fas fa-id-card"></i> My Profile & QR</a>
+            </li>
+            <li>
+                <a href="#performance"><i class="fas fa-chart-line"></i> IA Assessment</a>
+            </li>
+            <li>
+                <a href="#notifications"><i class="fas fa-bell"></i> Circulars</a>
+            </li>
+        </ul>
 
-    <h2>SIAMS</h2>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('home') }}">
+                <i class="fas fa-sign-out-alt"></i> Logout Portal
+            </a>
+        </div>
+    </aside>
 
-    <ul>
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-content">
 
-        <li><i class="fas fa-home"></i> Dashboard</li>
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1>Welcome Back, {% if student and student[1] %}{{ student[1] }}{% else %}Student{% endif %} 👋</h1>
+                <p>Smart Internal Assessment & Academic Performance Tracking</p>
+            </div>
 
-        <li><i class="fas fa-book"></i> Subjects</li>
+            <div class="topbar-right">
+                <div class="user-badge">
+                    <div class="user-avatar" style="background: #10b981;">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <div class="user-info">{% if student and student[1] %}{{ student[1] }}{% else %}Student Profile{% endif %}</div>
+                        <span class="user-role-pill role-student">Student</span>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-        <li><i class="fas fa-clipboard"></i> Internal Marks</li>
+        <!-- Stats Overview Cards -->
+        <section class="cards-grid" id="performance">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Registered Courses</h3>
+                    <div class="stat-value">6 Subjects</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-book-open"></i>
+                </div>
+            </div>
 
-        <li><i class="fas fa-calendar-check"></i> Attendance</li>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Continuous IA Avg</h3>
+                    <div class="stat-value" style="color: #4f46e5;">88%</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-award"></i>
+                </div>
+            </div>
 
-        <li><i class="fas fa-chart-line"></i> Reports</li>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Lab Attendance</h3>
+                    <div class="stat-value" style="color: #10b981;">94%</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
 
-        <li><i class="fas fa-user"></i> Profile</li>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Lab Status</h3>
+                    <div class="stat-value" style="color: #0284c7; font-size: 24px;">Regular</div>
+                </div>
+                <div class="stat-icon icon-sky">
+                    <i class="fas fa-flask"></i>
+                </div>
+            </div>
+        </section>
 
-        <li><a href="/"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        <!-- Two-Column Student Information Grid -->
+        <div class="dashboard-grid" id="profile">
 
-    </ul>
+            <!-- Student Profile Details -->
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3><i class="fas fa-id-card-alt" style="color: var(--primary);"></i> Student Academic Identity</h3>
+                    <span class="user-role-pill role-student">Verified</span>
+                </div>
 
-</div>
+                <div class="profile-detail-list">
+                    <div class="profile-detail-item">
+                        <span>Full Name</span>
+                        <span>{% if student and student[1] %}{{ student[1] }}{% else %}Shreeram Adhari{% endif %}</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>University Seat No (USN)</span>
+                        <span style="color: var(--primary); font-family: monospace; font-size: 15px;">
+                            {% if student and student[0] %}{{ student[0] }}{% else %}VU2F2425005{% endif %}
+                        </span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>Department</span>
+                        <span>{% if student and student[3] %}{{ student[3] }}{% else %}Computer Science & Engg{% endif %}</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>Current Semester</span>
+                        <span>{% if student and student[4] %}{{ student[4] }}th Semester{% else %}5th Semester{% endif %}</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>Section</span>
+                        <span>{% if student and student[5] %}Section {{ student[5] }}{% else %}Section A{% endif %}</span>
+                    </div>
+                    <div class="profile-detail-item">
+                        <span>Email ID</span>
+                        <span>{% if student and student[2] %}{{ student[2] }}{% else %}student@college.edu{% endif %}</span>
+                    </div>
+                </div>
+            </div>
 
-<div class="main-content">
+            <!-- Student QR Identity Code -->
+            <div class="dashboard-card" style="text-align: center;">
+                <div class="dashboard-card-header">
+                    <h3><i class="fas fa-qrcode" style="color: var(--primary);"></i> Contactless Attendance QR</h3>
+                    <span class="user-role-pill role-student" style="background: #e0f2fe; color: #0369a1;">Scan Ready</span>
+                </div>
 
-    <div class="topbar">
-        <h1>Welcome, Student 👋</h1>
-        <p>Smart Internal Assessment Management System</p>
-    </div>
+                <div class="qr-preview-box">
+                    {% if student and student[6] %}
+                    <img src="{{ url_for('static', filename=student[6].replace('static/', '')) }}" alt="Student QR Code">
+                    {% elif student and student[0] %}
+                    <img src="{{ url_for('static', filename='qrcodes/' + student[0] + '.png') }}" alt="Student QR Code" onerror="this.src='{{ url_for('static', filename='qrcodes/AIML010.png') }}'">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='qrcodes/AIML010.png') }}" alt="Sample Student QR">
+                    {% endif %}
+                    <p>Present this QR code to your faculty scanner for instant lab attendance.</p>
+                </div>
 
-    <div class="cards">
+                <div style="margin-top: 18px;">
+                    <a href="{{ url_for('home') }}" class="action-btn action-btn-primary">
+                        <i class="fas fa-home"></i> Return to Homepage
+                    </a>
+                </div>
+            </div>
 
-        <div class="card">
-            <h3>📚 Subjects</h3>
-            <p>6</p>
         </div>
 
-        <div class="card">
-            <h3>📝 IA Average</h3>
-            <p>82%</p>
-        </div>
+        <!-- Circulars / Notifications -->
+        <div class="dashboard-card" style="margin-top: 24px;" id="notifications">
+            <div class="dashboard-card-header">
+                <h3><i class="fas fa-bullhorn" style="color: #d97706;"></i> Department Notices & Assessment Circulars</h3>
+            </div>
 
-        <div class="card">
-            <h3>📅 Attendance</h3>
-            <p>91%</p>
-        </div>
-
-        <div class="card">
-            <h3>🔔 Notifications</h3>
-            <p>3 New</p>
-        </div>
-
-    </div>
-
-    <div class="info-section">
-
-        <div class="student-profile">
-
-            <h2>👤 Student Profile</h2>
-
-            <p><strong>Name:</strong> Shreeram</p>
-
-            <p><strong>Department:</strong> Computer Science</p>
-
-            <p><strong>Semester:</strong> 5th Semester</p>
-
-            <p><strong>Roll No:</strong> CS23015</p>
-
-        </div>
-
-        <div class="notifications">
-
-            <h2>📢 Recent Notifications</h2>
-
-            <ul>
-                <li>IA-2 Marks Published</li>
-                <li>Attendance Updated</li>
-                <li>Assignment Submission on Friday</li>
-                <li>Department Meeting at 2:00 PM</li>
+            <ul class="notification-list">
+                <li class="notification-item">
+                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                    <div>
+                        <p>Internal Assessment-1 (IA-1) Marks Published & Verified by Department Committee.</p>
+                        <span style="font-size: 11px; color: var(--text-muted);">Academic Office • Just now</span>
+                    </div>
+                </li>
+                <li class="notification-item">
+                    <i class="fas fa-calendar-alt" style="color: #0284c7;"></i>
+                    <div>
+                        <p>Practical Lab Evaluation Scheduled for all 5th Semester batches this week.</p>
+                        <span style="font-size: 11px; color: var(--text-muted);">Lab Coordinator • Today</span>
+                    </div>
+                </li>
+                <li class="notification-item">
+                    <i class="fas fa-file-alt" style="color: #7c3aed;"></i>
+                    <div>
+                        <p>Continuous Evaluation Assignment Submission deadline: Friday 5:00 PM.</p>
+                        <span style="font-size: 11px; color: var(--text-muted);">Subject Faculty • 2 days ago</span>
+                    </div>
+                </li>
             </ul>
-
         </div>
 
-    </div>
-
-</div>
+    </main>
 
 </body>
 

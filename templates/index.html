@@ -8,195 +8,238 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body>
 
     <!-- ================= NAVBAR ================= -->
-
     <nav class="navbar">
-
-        <div class="logo">
-
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SIAMS">
-
-            <h2>SIAMS</h2>
-
-        </div>
+        <a href="{{ url_for('home') }}" class="logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SIAMS Logo">
+            <div class="logo-text">
+                <h2>SIAMS</h2>
+                <span>Smart Assessment</span>
+            </div>
+        </a>
 
         <ul class="nav-links">
-
-            <li><a href="#">Home</a></li>
-
-            <li><a href="#about">About</a></li>
-
+            <li><a href="{{ url_for('home') }}">Home</a></li>
             <li><a href="#features">Features</a></li>
-
-            <li><a href="{{ url_for('login') }}">Login</a></li>
-
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="{{ url_for('about') }}">About</a></li>
+            <li>
+                <a href="{{ url_for('login') }}" class="nav-btn">
+                    <i class="fas fa-sign-in-alt"></i> Login Portal
+                </a>
+            </li>
         </ul>
-
     </nav>
 
     <!-- ================= HERO ================= -->
-
     <section class="hero">
-
-        <div class="overlay"></div>
-
         <div class="hero-content">
 
             <div class="hero-left">
-
                 <span class="tag">
-                    Smart QR Based Platform
+                    <i class="fas fa-bolt"></i> Next-Gen College ERP Solution
                 </span>
 
                 <h1>
-                    Smart Internal Assessment Management System
+                    Smart Internal Assessment & <span>Practical Evaluation</span> System
                 </h1>
 
                 <p>
-                    Manage attendance, practical evaluations, internal assessments,
-                    reports and student performance using secure QR technology.
+                    Automate student attendance with dynamic mobile QR scanning, streamline continuous internal evaluation (CIE), record practical marks in real-time, and generate instant institutional analytics.
                 </p>
 
                 <div class="buttons">
-
                     <a href="{{ url_for('login') }}" class="btn-primary">
-                        Get Started
+                        <i class="fas fa-rocket"></i> Get Started
                     </a>
-
                     <a href="#features" class="btn-secondary">
-                        Learn More
+                        <i class="fas fa-compass"></i> Explore Features
                     </a>
-
                 </div>
-
             </div>
 
             <div class="hero-right">
-
-                <img src="{{ url_for('static', filename='images/background.jpg') }}" alt="SIAMS">
-
+                <div class="hero-card-preview">
+                    <img src="{{ url_for('static', filename='images/background.jpg') }}" alt="SIAMS Platform">
+                    <div class="hero-stats-banner">
+                        <div class="hero-stat">
+                            <h4>100%</h4>
+                            <p>Paperless</p>
+                        </div>
+                        <div class="hero-stat">
+                            <h4>Instant</h4>
+                            <p>QR Scanning</p>
+                        </div>
+                        <div class="hero-stat">
+                            <h4>3 Roles</h4>
+                            <p>Admin, Faculty, Student</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
-
     </section>
+
     <!-- ================= FEATURES ================= -->
-
     <section class="features" id="features">
-
-        <h2>Key Features</h2>
+        <div class="section-header">
+            <span class="section-badge">Platform Capabilities</span>
+            <h2>Engineered for Academic Excellence</h2>
+            <p>A unified digital ecosystem replacing slow manual spreadsheets with rapid, error-free automated workflows.</p>
+        </div>
 
         <div class="feature-grid">
 
             <div class="card">
-
-                <i class="fas fa-qrcode"></i>
-
+                <div class="card-icon" style="background: #eef2ff; color: #4f46e5;">
+                    <i class="fas fa-qrcode"></i>
+                </div>
                 <h3>QR Attendance</h3>
-
-                <p>
-                    Instant attendance through secure QR code scanning.
-                </p>
-
+                <p>Lightning-fast contactless attendance marking during lab sessions via student identity QR codes.</p>
             </div>
 
             <div class="card">
-
-                <i class="fas fa-chart-line"></i>
-
-                <h3>Analytics</h3>
-
-                <p>
-                    Dashboard with student performance and assessment reports.
-                </p>
-
+                <div class="card-icon" style="background: #ecfdf5; color: #10b981;">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <h3>IA Calculation</h3>
+                <p>Automated computation of Internal Assessment marks combining test scores, assignments, seminars, and viva.</p>
             </div>
 
             <div class="card">
-
-                <i class="fas fa-file-alt"></i>
-
-                <h3>Digital Reports</h3>
-
-                <p>
-                    Automatic report generation for every evaluation.
-                </p>
-
+                <div class="card-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <h3>Practical Labs</h3>
+                <p>Real-time session management allowing faculty to start practical batches and evaluate rubric criteria on the spot.</p>
             </div>
 
             <div class="card">
+                <div class="card-icon" style="background: #fffbeb; color: #d97706;">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3>Live Analytics</h3>
+                <p>Comprehensive dashboard metrics for HODs and faculty to track attendance trends and academic performance.</p>
+            </div>
 
-                <i class="fas fa-user-shield"></i>
+            <div class="card">
+                <div class="card-icon" style="background: #fdf2f8; color: #db2777;">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <h3>Instant Reports</h3>
+                <p>Generate downloadable, formatted assessment reports and official university grade sheets with a single click.</p>
+            </div>
 
-                <h3>Secure Login</h3>
-
-                <p>
-                    Role-based authentication for Admin, Faculty and Students.
-                </p>
-
+            <div class="card">
+                <div class="card-icon" style="background: #f5f3ff; color: #7c3aed;">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h3>Role-Based Access</h3>
+                <p>Granular permissions ensuring students, faculty, and administrators each access their dedicated operational portals.</p>
             </div>
 
         </div>
-
     </section>
 
-    <!-- ================= ABOUT ================= -->
+    <!-- ================= HOW IT WORKS ================= -->
+    <section class="about" id="how-it-works">
+        <div class="about-card">
+            <div class="about-text">
+                <span class="section-badge">Simple 3-Step Workflow</span>
+                <h2>How SIAMS Powers Your Campus</h2>
+                <p>Designed from the ground up to minimize administrative burden and maximize accuracy for educators and students alike.</p>
+                
+                <div class="about-highlights">
+                    <div class="highlight-item">
+                        <i class="fas fa-check"></i>
+                        <span>1. Faculty sets up subjects and generates student QR identity</span>
+                    </div>
+                    <div class="highlight-item">
+                        <i class="fas fa-check"></i>
+                        <span>2. Students present dynamic QR codes during lab sessions</span>
+                    </div>
+                    <div class="highlight-item">
+                        <i class="fas fa-check"></i>
+                        <span>3. System aggregates IA marks and attendance logs automatically</span>
+                    </div>
+                </div>
+            </div>
 
-    <section class="about" id="about">
-
-        <div class="about-text">
-
-            <h2>About SIAMS</h2>
-
-            <p>
-
-                SIAMS is a Smart Internal Assessment Management System designed to
-                simplify attendance, practical evaluation, internal assessment,
-                analytics and academic reporting through QR technology.
-
-            </p>
-
+            <div class="hero-card-preview" style="box-shadow: var(--shadow-lg);">
+                <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); padding: 40px 30px; color: #fff; text-align: center;">
+                    <i class="fas fa-graduation-cap" style="font-size: 50px; margin-bottom: 20px; color: #60a5fa;"></i>
+                    <h3 style="font-size: 22px; font-weight: 800; margin-bottom: 10px;">Smart ERP System</h3>
+                    <p style="font-size: 14px; opacity: 0.9;">Empowering students and faculty with modern transparent assessment technology.</p>
+                    <div style="margin-top: 25px;">
+                        <a href="{{ url_for('login') }}" class="btn-primary" style="background: #fff; color: #1e3c72; box-shadow: none;">
+                            Access Portal Now
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-
     </section>
+
     <!-- ================= FOOTER ================= -->
-
     <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h3>SIAMS</h3>
+                <p>Smart Internal Assessment & Maintenance System — automating academic records with security and precision.</p>
+            </div>
 
-        <h3>SIAMS</h3>
+            <div class="footer-column">
+                <h4>Quick Navigation</h4>
+                <ul>
+                    <li><a href="{{ url_for('home') }}">Home</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="{{ url_for('about') }}">About Us</a></li>
+                    <li><a href="{{ url_for('login') }}">Login Portal</a></li>
+                </ul>
+            </div>
 
-        <p>
-            Smart Internal Assessment Management System
-        </p>
+            <div class="footer-column">
+                <h4>Portals</h4>
+                <ul>
+                    <li><a href="{{ url_for('login') }}">Admin Login</a></li>
+                    <li><a href="{{ url_for('login') }}">Faculty Portal</a></li>
+                    <li><a href="{{ url_for('login') }}">Student Portal</a></li>
+                    <li><a href="{{ url_for('signup') }}">Register Account</a></li>
+                </ul>
+            </div>
 
-        <div class="social">
-
-            <i class="fab fa-github"></i>
-
-            <i class="fab fa-linkedin"></i>
-
-            <i class="fab fa-instagram"></i>
-
+            <div class="footer-column">
+                <h4>Project Info</h4>
+                <p style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+                    Developed for College Internal Assessment automation & paperless evaluation.
+                </p>
+                <div class="footer-social" style="margin-top: 16px;">
+                    <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                    <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
         </div>
 
-        <p class="copy">
-            © 2026 SIAMS. All Rights Reserved.
-        </p>
-
+        <div class="footer-bottom">
+            <p>© 2026 SIAMS. All Rights Reserved. Smart Internal Assessment Management System.</p>
+            <p><a href="{{ url_for('login') }}" style="color: #60a5fa;">Sign In →</a></p>
+        </div>
     </footer>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-
 </body>
 
 </html>
