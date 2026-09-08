@@ -219,7 +219,7 @@ def add_subject():
         subject_name = request.form["subject_name"]
         department = request.form["department"]
         semester = request.form["semester"]
-        teacher_id = request.form["teacher_id"]
+        teacher_id = request.form.get("teacher_id", "").strip()
 
         conn = sqlite3.connect("database.db")
         cursor = conn.cursor()
@@ -228,11 +228,18 @@ def add_subject():
 
             cursor.execute("""
             INSERT INTO subjects
-            (subject_code, subject_name, department, semester, teacher_id)
-            VALUES (?, ?, ?, ?, ?)
-            """, (subject_code, subject_name, department, semester, teacher_id))
+            (subject_code, subject_name, department, semester)
+            VALUES (?, ?, ?, ?)
+            """, (subject_code, subject_name, department, semester))
 
             conn.commit()
+
+            if teacher_id:
+                cursor.execute("""
+                INSERT INTO teacher_subjects (teacher_id, subject_id)
+                VALUES (?, ?)
+                """, (teacher_id, subject_code))
+                conn.commit()
 
         except sqlite3.IntegrityError:
             return "Subject already exists!"
@@ -311,7 +318,7 @@ def assign_subject():
 
         cursor.execute("""
         INSERT INTO teacher_subjects
-        (teacher_id, subject_code)
+        (teacher_id, subject_id)
         VALUES (?, ?)
         """, (teacher_id, subject_code))
 
@@ -347,7 +354,7 @@ def teacher_subjects(teacher_id):
            subjects.subject_name
     FROM teacher_subjects
     JOIN subjects
-    ON teacher_subjects.subject_code = subjects.subject_code
+    ON teacher_subjects.subject_id = subjects.subject_code
     WHERE teacher_subjects.teacher_id = ?
     """, (teacher_id,))
 
