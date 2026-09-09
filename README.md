@@ -26,7 +26,7 @@
  -PYTHON
  -FLASK
 3) DATABASE
- -SOlite
+ -SQLite
 4) TOOLS
  -VS CODE
  -GIT 

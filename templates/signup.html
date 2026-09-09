@@ -30,6 +30,13 @@
                 <p>Register to get started with SIAMS Portal</p>
             </div>
 
+            {% if error %}
+            <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px 16px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-exclamation-circle" style="font-size: 16px;"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
             <form action="/signup" method="POST">
 
                 <div class="form-group">
@@ -82,7 +89,6 @@
                             <option value="">-- Select Your Role --</option>
                             <option value="student">👨‍🎓 Student</option>
                             <option value="teacher">👨‍🏫 Teacher / Faculty</option>
-                            <option value="admin">🛡️ Administrator</option>
                         </select>
                     </div>
                 </div>

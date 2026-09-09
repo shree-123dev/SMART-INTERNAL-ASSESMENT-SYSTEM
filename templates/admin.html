@@ -45,7 +45,7 @@
         </ul>
 
         <div class="sidebar-footer">
-            <a href="{{ url_for('home') }}">
+            <a href="{{ url_for('logout') }}">
                 <i class="fas fa-sign-out-alt"></i> Logout System
             </a>
         </div>
@@ -58,7 +58,7 @@
         <header class="topbar">
             <div class="topbar-left">
                 <h1>Administrator Control Center 🛡️</h1>
-                <p>Campus ERP Infrastructure & Academic Management</p>
+                <p>Welcome, {{ session.get('fullname', 'Administrator') }} • Academic Management System</p>
             </div>
 
             <div class="topbar-right">
@@ -70,7 +70,7 @@
                         <i class="fas fa-user-shield"></i>
                     </div>
                     <div>
-                        <div class="user-info">Master Administrator</div>
+                        <div class="user-info">{{ session.get('fullname', 'Administrator') }}</div>
                         <span class="user-role-pill role-admin">System Admin</span>
                     </div>
                 </div>

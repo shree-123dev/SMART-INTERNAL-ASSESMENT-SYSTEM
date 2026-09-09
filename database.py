@@ -1,4 +1,5 @@
 import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 
 def get_db_connection():
     """Returns a SQLite connection with foreign keys enabled and row access."""
@@ -6,6 +7,41 @@ def get_db_connection():
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.row_factory = sqlite3.Row
     return conn
+
+def seed_default_users(conn):
+    """Seeds default accounts with hashed passwords if not already present, and upgrades any plaintext passwords."""
+    cursor = conn.cursor()
+
+    default_accounts = [
+        ("System Administrator", "admin@test.com", "admin123", "admin"),
+        ("Prof. Alan Teacher", "teacher@test.com", "teacher123", "teacher"),
+        ("Shreeram Student", "student@test.com", "student123", "student")
+    ]
+
+    for fullname, email, plain_pass, role in default_accounts:
+        cursor.execute("SELECT id, password FROM users WHERE email = ?", (email,))
+        row = cursor.fetchone()
+        if not row:
+            hashed = generate_password_hash(plain_pass)
+            cursor.execute(
+                "INSERT INTO users (fullname, email, password, role) VALUES (?, ?, ?, ?)",
+                (fullname, email, hashed, role)
+            )
+        else:
+            # Upgrade plaintext password if found
+            current_pass = row[1]
+            if not current_pass.startswith("scrypt:") and not current_pass.startswith("pbkdf2:"):
+                hashed = generate_password_hash(plain_pass)
+                cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed, row[0]))
+
+    # Also upgrade any other legacy plaintext passwords
+    cursor.execute("SELECT id, password FROM users")
+    all_users = cursor.fetchall()
+    for uid, pwd in all_users:
+        if pwd and not (pwd.startswith("scrypt:") or pwd.startswith("pbkdf2:")):
+            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (generate_password_hash(pwd), uid))
+
+    conn.commit()
 
 def init_db():
     """Initializes the SIAMS SQLite database schema with all required tables and constraints."""
@@ -121,8 +157,12 @@ def init_db():
     """)
 
     conn.commit()
+
+    # Seed initial test/admin accounts securely
+    seed_default_users(conn)
+
     conn.close()
 
 if __name__ == "__main__":
     init_db()
-    print("SIAMS Database initialized successfully with all 8 tables!")
+    print("SIAMS Database initialized successfully with all 8 tables and hashed accounts!")

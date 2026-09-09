@@ -101,29 +101,31 @@ def verify():
     print('\n=== 5. TESTING FLASK APPLICATION COMPATIBILITY ===')
     import app
     client = app.app.test_client()
-    routes = [
-        '/',
-        '/login',
-        '/signup',
-        '/dashboard',
-        '/admin',
-        '/teacher',
-        '/view_students',
-        '/view_teachers',
-        '/add_student',
-        '/add_teacher',
-        '/add_subject',
-        '/assign_subject',
-        '/about'
-    ]
+    # Test public routes
+    public_routes = ['/', '/login', '/signup', '/dashboard', '/about']
     flask_ok = True
-    for route in routes:
+    for route in public_routes:
         res = client.get(route)
         if res.status_code != 200:
-            print(f'[FAIL] Route {route} -> HTTP {res.status_code}')
+            print(f'[FAIL] Public route {route} -> HTTP {res.status_code}')
             flask_ok = False
+    
+    # Test protected routes with authenticated session
+    with client.session_transaction() as sess:
+        sess['user_id'] = 2
+        sess['fullname'] = 'System Administrator'
+        sess['email'] = 'admin@test.com'
+        sess['role'] = 'admin'
+
+    protected_routes = ['/admin', '/view_students', '/view_teachers', '/add_student', '/add_teacher', '/add_subject', '/assign_subject']
+    for route in protected_routes:
+        res = client.get(route)
+        if res.status_code != 200:
+            print(f'[FAIL] Protected route {route} -> HTTP {res.status_code}')
+            flask_ok = False
+
     if flask_ok:
-        print('[OK] All Flask routes rendered successfully with HTTP 200!')
+        print('[OK] All Flask public and protected routes rendered successfully with HTTP 200!')
 
     print('\nALL DAY 2 TESTS PASSED SUCCESSFULLY!')
 

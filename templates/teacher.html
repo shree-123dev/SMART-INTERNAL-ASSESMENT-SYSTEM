@@ -45,7 +45,7 @@
         </ul>
 
         <div class="sidebar-footer">
-            <a href="{{ url_for('home') }}">
+            <a href="{{ url_for('logout') }}">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
@@ -58,7 +58,7 @@
         <header class="topbar">
             <div class="topbar-left">
                 <h1>Faculty Evaluation Portal 👨‍🏫</h1>
-                <p>Manage coursework, lab sessions, and continuous student evaluations</p>
+                <p>Welcome, {{ session.get('fullname', 'Faculty Member') }} 👋 • Manage continuous student evaluations</p>
             </div>
 
             <div class="topbar-right">
@@ -70,7 +70,7 @@
                         <i class="fas fa-user-tie"></i>
                     </div>
                     <div>
-                        <div class="user-info">Faculty Member</div>
+                        <div class="user-info">{{ session.get('fullname', 'Faculty Member') }}</div>
                         <span class="user-role-pill role-teacher">Teacher</span>
                     </div>
                 </div>

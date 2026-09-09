@@ -42,7 +42,7 @@
         </ul>
 
         <div class="sidebar-footer">
-            <a href="{{ url_for('home') }}">
+            <a href="{{ url_for('logout') }}">
                 <i class="fas fa-sign-out-alt"></i> Logout Portal
             </a>
         </div>
@@ -54,7 +54,7 @@
         <!-- Topbar -->
         <header class="topbar">
             <div class="topbar-left">
-                <h1>Welcome Back, {% if student and student[1] %}{{ student[1] }}{% else %}Student{% endif %} 👋</h1>
+                <h1>Welcome, {{ session.get('fullname', (student['fullname'] if student else 'Student')) }} 👋</h1>
                 <p>Smart Internal Assessment & Academic Performance Tracking</p>
             </div>
 
@@ -67,7 +67,7 @@
                         <i class="fas fa-user-graduate"></i>
                     </div>
                     <div>
-                        <div class="user-info">{% if student and student[1] %}{{ student[1] }}{% else %}Student Profile{% endif %}</div>
+                        <div class="user-info">{{ session.get('fullname', (student['fullname'] if student else 'Student')) }}</div>
                         <span class="user-role-pill role-student">Student</span>
                     </div>
                 </div>
