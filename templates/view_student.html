@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ student['fullname'] }} | Student Profile | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+
+        <!-- Back Header Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <a href="{{ url_for('view_students') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-arrow-left"></i> Back to Student Directory
+            </a>
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ url_for('edit_student', usn=student['usn']) }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-edit"></i> Edit Details
+                </a>
+            </div>
+        </div>
+
+        <!-- Student Profile Card -->
+        <div class="dashboard-card" style="padding: 36px; border-radius: var(--radius-xl); box-shadow: var(--shadow-md);">
+
+            <div style="display: flex; align-items: center; gap: 20px; padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px;">
+                <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);">
+                    {{ student['fullname'][0]|upper }}
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">{{ student['fullname'] }}</h2>
+                        <span class="badge badge-success">Active Enrolled</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">
+                        <span style="font-family: monospace; font-weight: 700; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px;">{{ student['usn'] }}</span>
+                        • Department of {{ student['department'] }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Profile Field Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px;">
+                <div class="profile-detail-item">
+                    <span>University Seat No (USN)</span>
+                    <span style="font-family: monospace; color: var(--primary);">{{ student['usn'] }}</span>
+                </div>
+                <div class="profile-detail-item">
+                    <span>Institutional Email</span>
+                    <span>{{ student['email'] }}</span>
+                </div>
+                <div class="profile-detail-item">
+                    <span>Department / Branch</span>
+                    <span>{{ student['department'] }}</span>
+                </div>
+                <div class="profile-detail-item">
+                    <span>Current Semester</span>
+                    <span class="badge badge-warning">Semester {{ student['semester'] }}</span>
+                </div>
+                <div class="profile-detail-item">
+                    <span>Assigned Section</span>
+                    <span class="badge badge-info">Section {{ student['section'] }}</span>
+                </div>
+                <div class="profile-detail-item">
+                    <span>Account Security</span>
+                    <span>Role: Student</span>
+                </div>
+            </div>
+
+            <!-- QR Identity Preview Box -->
+            <div class="qr-preview-box" style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; text-align: center;">
+                <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="fas fa-qrcode" style="color: var(--primary); margin-right: 6px;"></i> Student QR Identity Card
+                </h4>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Scan to mark practical attendance in scheduled lab sessions</p>
+
+                <div style="display: inline-block; padding: 12px; background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
+                    <img src="{{ url_for('static', filename='qrcodes/' ~ student['usn'] ~ '.png') }}" alt="Student QR Code" style="width: 160px; height: 160px; object-fit: contain;" onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/logo.png') }}';">
+                </div>
+
+                <div style="margin-top: 14px;">
+                    <a href="{{ url_for('static', filename='qrcodes/' ~ student['usn'] ~ '.png') }}" target="_blank" download="{{ student['usn'] }}_QR.png" class="btn btn-outline" style="font-size: 13px; padding: 6px 16px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-download"></i> Download QR Matrix
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

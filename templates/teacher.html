@@ -7,6 +7,7 @@
     <title>Faculty Dashboard | SIAMS</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,17 +31,16 @@
             <li class="active">
                 <a href="{{ url_for('teacher') }}"><i class="fas fa-chalkboard-teacher"></i> Faculty Home</a>
             </li>
+            {% if teacher_id %}
             <li>
-                <a href="{{ url_for('view_students') }}"><i class="fas fa-user-graduate"></i> Student Records</a>
+                <a href="{{ url_for('teacher_subjects', teacher_id=teacher_id) }}"><i class="fas fa-book-reader"></i> My Subjects</a>
             </li>
-            <li>
-                <a href="{{ url_for('add_student') }}"><i class="fas fa-user-plus"></i> Enroll Student</a>
-            </li>
-            <li>
-                <a href="{{ url_for('view_teachers') }}"><i class="fas fa-users"></i> Department Faculty</a>
-            </li>
+            {% endif %}
             <li>
                 <a href="{{ url_for('assign_subject') }}"><i class="fas fa-link"></i> Subject Mapping</a>
+            </li>
+            <li>
+                <a href="{{ url_for('about') }}"><i class="fas fa-info-circle"></i> About Portal</a>
             </li>
         </ul>
 
@@ -58,7 +58,7 @@
         <header class="topbar">
             <div class="topbar-left">
                 <h1>Faculty Evaluation Portal 👨‍🏫</h1>
-                <p>Welcome, {{ session.get('fullname', 'Faculty Member') }} 👋 • Manage continuous student evaluations</p>
+                <p>Welcome, {{ fullname }} 👋 • Academic Teaching & Evaluation Hub</p>
             </div>
 
             <div class="topbar-right">
@@ -70,8 +70,8 @@
                         <i class="fas fa-user-tie"></i>
                     </div>
                     <div>
-                        <div class="user-info">{{ session.get('fullname', 'Faculty Member') }}</div>
-                        <span class="user-role-pill role-teacher">Teacher</span>
+                        <div class="user-info">{{ fullname }}</div>
+                        <span class="user-role-pill role-teacher">Faculty</span>
                     </div>
                 </div>
             </div>
@@ -82,7 +82,8 @@
             <div class="stat-card">
                 <div class="stat-info">
                     <h3>Teaching Load</h3>
-                    <div class="stat-value">Assigned</div>
+                    <div class="stat-value" style="color: #0284c7;">Active</div>
+                    <span style="font-size: 12px; color: var(--text-muted);">Assigned Curriculum</span>
                 </div>
                 <div class="stat-icon icon-blue">
                     <i class="fas fa-book-reader"></i>
@@ -92,7 +93,8 @@
             <div class="stat-card">
                 <div class="stat-info">
                     <h3>QR Attendance</h3>
-                    <div class="stat-value" style="color: #10b981;">Enabled</div>
+                    <div class="stat-value" style="color: #10b981;">Ready</div>
+                    <span style="font-size: 12px; color: var(--text-muted);">Practical Sessions</span>
                 </div>
                 <div class="stat-icon icon-green">
                     <i class="fas fa-qrcode"></i>
@@ -102,7 +104,8 @@
             <div class="stat-card">
                 <div class="stat-info">
                     <h3>Lab Evaluation</h3>
-                    <div class="stat-value">Active</div>
+                    <div class="stat-value" style="color: #0ea5e9;">Enabled</div>
+                    <span style="font-size: 12px; color: var(--text-muted);">Rubric Scoring</span>
                 </div>
                 <div class="stat-icon icon-sky">
                     <i class="fas fa-flask"></i>
@@ -111,8 +114,9 @@
 
             <div class="stat-card">
                 <div class="stat-info">
-                    <h3>IA Assessment</h3>
-                    <div class="stat-value">Continuous</div>
+                    <h3>Assessment Status</h3>
+                    <div class="stat-value" style="color: #f59e0b;">Continuous</div>
+                    <span style="font-size: 12px; color: var(--text-muted);">IA-1 / IA-2 Tracker</span>
                 </div>
                 <div class="stat-icon icon-amber">
                     <i class="fas fa-clipboard-check"></i>
@@ -122,72 +126,41 @@
 
         <!-- Management Actions -->
         <h2 style="font-size: 20px; font-weight: 800; color: var(--dark-sidebar); margin-bottom: 16px;">
-            📚 Academic Operations & Student Management
+            📚 Faculty Course Load & Operations
         </h2>
 
         <section class="action-grid">
-            <a href="{{ url_for('add_student') }}" class="action-tile">
+            {% if teacher_id %}
+            <a href="{{ url_for('teacher_subjects', teacher_id=teacher_id) }}" class="action-tile">
                 <div class="action-tile-icon icon-blue">
-                    <i class="fas fa-user-plus"></i>
+                    <i class="fas fa-book-reader"></i>
                 </div>
                 <div class="action-tile-text">
-                    <h4>Add Student</h4>
-                    <p>Register new student and generate QR code</p>
+                    <h4>My Assigned Subjects</h4>
+                    <p>View your mapped courses and practical sessions</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
-
-            <a href="{{ url_for('view_students') }}" class="action-tile">
-                <div class="action-tile-icon icon-sky">
-                    <i class="fas fa-user-graduate"></i>
-                </div>
-                <div class="action-tile-text">
-                    <h4>View Students</h4>
-                    <p>Browse student roster, semester & sections</p>
-                </div>
-                <i class="fas fa-chevron-right action-tile-arrow"></i>
-            </a>
-
-            <a href="{{ url_for('add_subject') }}" class="action-tile">
-                <div class="action-tile-icon icon-green">
-                    <i class="fas fa-plus-circle"></i>
-                </div>
-                <div class="action-tile-text">
-                    <h4>Add Subject</h4>
-                    <p>Create new subject codes and syllabus modules</p>
-                </div>
-                <i class="fas fa-chevron-right action-tile-arrow"></i>
-            </a>
+            {% endif %}
 
             <a href="{{ url_for('assign_subject') }}" class="action-tile">
-                <div class="action-tile-icon icon-purple">
-                    <i class="fas fa-chalkboard-teacher"></i>
+                <div class="action-tile-icon icon-sky">
+                    <i class="fas fa-link"></i>
                 </div>
                 <div class="action-tile-text">
-                    <h4>Assign Subject</h4>
-                    <p>Map subjects to specific faculty teachers</p>
+                    <h4>Course Subject Mapping</h4>
+                    <p>Link curriculum subjects to faculty schedules</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
 
-            <a href="{{ url_for('add_teacher') }}" class="action-tile">
-                <div class="action-tile-icon icon-amber">
-                    <i class="fas fa-user-plus"></i>
+            <a href="{{ url_for('about') }}" class="action-tile">
+                <div class="action-tile-icon icon-green">
+                    <i class="fas fa-info-circle"></i>
                 </div>
                 <div class="action-tile-text">
-                    <h4>Add Teacher</h4>
-                    <p>Register new faculty colleague into system</p>
-                </div>
-                <i class="fas fa-chevron-right action-tile-arrow"></i>
-            </a>
-
-            <a href="{{ url_for('view_teachers') }}" class="action-tile">
-                <div class="action-tile-icon icon-blue">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="action-tile-text">
-                    <h4>View Teachers</h4>
-                    <p>Check department faculty directory</p>
+                    <h4>System Guidelines</h4>
+                    <p>Learn about SIAMS internal assessment rubrics</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
@@ -195,7 +168,7 @@
 
         <!-- Practical Session Notice Banner -->
         <div class="dashboard-card" style="background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; border: none; margin-top: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
                 <div>
                     <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px;">
                         🔬 Practical Lab Sessions & QR Attendance
@@ -204,7 +177,7 @@
                         To start a live practical lab session, take attendance with QR codes, or evaluate lab rubrics, navigate to your assigned subjects mapping.
                     </p>
                 </div>
-                <a href="{{ url_for('assign_subject') }}" class="action-btn action-btn-success" style="padding: 12px 22px; font-size: 15px; border-radius: 8px;">
+                <a href="{{ url_for('assign_subject') }}" class="action-btn action-btn-success" style="padding: 12px 22px; font-size: 15px; border-radius: 8px; text-decoration: none;">
                     <i class="fas fa-external-link-alt"></i> Manage Assigned Subjects
                 </a>
             </div>

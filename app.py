@@ -206,9 +206,18 @@ def student():
 @app.route("/teacher")
 @role_required("teacher")
 def teacher():
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT teacher_id FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    teacher_id = tch["teacher_id"] if tch else None
+    conn.close()
+
     return render_template(
         "teacher.html",
-        fullname=session.get("fullname", "Faculty Member")
+        fullname=session.get("fullname", "Faculty Member"),
+        teacher_id=teacher_id
     )
 
 
@@ -216,155 +225,682 @@ def teacher():
 @app.route("/admin")
 @role_required("admin")
 def admin():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Query live database counts (not hardcoded)
+    cursor.execute("SELECT COUNT(*) FROM students")
+    total_students = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM teachers")
+    total_teachers = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM subjects")
+    total_subjects = cursor.fetchone()[0]
+
+    conn.close()
+
     return render_template(
         "admin.html",
-        fullname=session.get("fullname", "Administrator")
+        fullname=session.get("fullname", "Administrator"),
+        total_students=total_students,
+        total_teachers=total_teachers,
+        total_subjects=total_subjects
     )
 
 
+# ====================================================
+# STUDENT MANAGEMENT MODULE (DAY 4)
+# ====================================================
+
 # ---------------- ADD STUDENT ----------------
 @app.route("/add_student", methods=["GET", "POST"])
-@role_required("admin", "teacher")
+@role_required("admin")
 def add_student():
+    error = None
     if request.method == "POST":
-        usn = request.form["usn"]
-        fullname = request.form["fullname"]
-        email = request.form["email"]
-        department = request.form["department"]
-        semester = request.form["semester"]
-        section = request.form["section"]
+        usn = request.form.get("usn", "").strip().upper()
+        fullname = request.form.get("fullname", "").strip()
+        email = request.form.get("email", "").strip()
+        department = request.form.get("department", "").strip()
+        semester = request.form.get("semester", "").strip()
+        section = request.form.get("section", "").strip().upper()
+
+        if not usn or not fullname or not email or not department or not semester or not section:
+            error = "All fields are required. Please fill out the complete student registration form."
+            return render_template("add_student.html", error=error)
+
+        try:
+            sem_num = int(semester)
+            if sem_num < 1 or sem_num > 8:
+                error = "Semester must be a valid academic semester between 1 and 8."
+                return render_template("add_student.html", error=error)
+        except ValueError:
+            error = "Semester must be a valid number between 1 and 8."
+            return render_template("add_student.html", error=error)
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        try:
-            cursor.execute("""
-                INSERT INTO students
-                (usn, fullname, email, department, semester, section)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (usn, fullname, email, department, semester, section))
-            conn.commit()
-
-            qr_path = generate_student_qr(usn, fullname, department, semester)
-            cursor.execute("""
-                UPDATE students
-                SET qr_path = ?
-                WHERE usn = ?
-            """, (qr_path, usn))
-            conn.commit()
-
-        except sqlite3.IntegrityError:
+        # Check for duplicate USN
+        cursor.execute("SELECT id FROM students WHERE usn = ?", (usn,))
+        if cursor.fetchone():
             conn.close()
-            return "Student already exists!"
+            error = f"A student with USN '{usn}' is already registered in the system."
+            return render_template("add_student.html", error=error)
 
-        conn.close()
-        return redirect(url_for("view_students"))
+        # Check for duplicate Email
+        cursor.execute("SELECT id FROM students WHERE email = ?", (email,))
+        if cursor.fetchone():
+            conn.close()
+            error = f"A student with institutional email '{email}' already exists."
+            return render_template("add_student.html", error=error)
 
-    return render_template("add_student.html")
+        try:
+            # Generate QR code for student
+            qr_path = generate_student_qr(usn, fullname, department, sem_num)
+
+            cursor.execute("""
+                INSERT INTO students (usn, fullname, email, department, semester, section, qr_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (usn, fullname, email, department, sem_num, section, qr_path))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("view_students", success=f"Student {fullname} ({usn}) enrolled successfully!"))
+        except Exception as e:
+            conn.close()
+            error = f"Database error while creating student: {str(e)}"
+            return render_template("add_student.html", error=error)
+
+    return render_template("add_student.html", error=error)
 
 
-# ---------------- VIEW STUDENTS ----------------
+# ---------------- VIEW STUDENTS (WITH SEARCH) ----------------
 @app.route("/view_students")
-@role_required("admin", "teacher")
+@role_required("admin")
 def view_students():
+    search_query = request.args.get("search", "").strip()
+    success = request.args.get("success")
+    error = request.args.get("error")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if search_query:
+        term = f"%{search_query}%"
+        cursor.execute("""
+            SELECT usn, fullname, email, department, semester, section, qr_path
+            FROM students
+            WHERE usn LIKE ? OR fullname LIKE ? OR email LIKE ? OR department LIKE ?
+            ORDER BY usn ASC
+        """, (term, term, term, term))
+    else:
+        cursor.execute("""
+            SELECT usn, fullname, email, department, semester, section, qr_path
+            FROM students
+            ORDER BY usn ASC
+        """)
+
+    students = cursor.fetchall()
+    conn.close()
+
+    return render_template(
+        "view_students.html",
+        students=students,
+        search_query=search_query,
+        success=success,
+        error=error
+    )
+
+
+# ---------------- VIEW SINGLE STUDENT DETAILS ----------------
+@app.route("/view_student/<usn>")
+@role_required("admin")
+def view_student(usn):
     conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT usn, fullname, email, department, semester, section
-    FROM students
-    """)
-    students = cursor.fetchall()
+        SELECT usn, fullname, email, department, semester, section, qr_path
+        FROM students
+        WHERE usn = ?
+    """, (usn,))
+    student = cursor.fetchone()
     conn.close()
 
-    return render_template("view_students.html", students=students)
+    if not student:
+        return redirect(url_for("view_students", error=f"Student record '{usn}' not found."))
+
+    return render_template("view_student.html", student=student)
 
 
-# ---------------- ADD SUBJECT ----------------
-@app.route("/add_subject", methods=["GET", "POST"])
-@role_required("admin", "teacher")
-def add_subject():
+# ---------------- EDIT STUDENT ----------------
+@app.route("/edit_student/<usn>", methods=["GET", "POST"])
+@role_required("admin")
+def edit_student(usn):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM students WHERE usn = ?", (usn,))
+    student = cursor.fetchone()
+
+    if not student:
+        conn.close()
+        return redirect(url_for("view_students", error=f"Student '{usn}' not found."))
+
+    error = None
     if request.method == "POST":
-        subject_code = request.form["subject_code"]
-        subject_name = request.form["subject_name"]
-        department = request.form["department"]
-        semester = request.form["semester"]
-        teacher_id = request.form.get("teacher_id", "").strip()
+        fullname = request.form.get("fullname", "").strip()
+        email = request.form.get("email", "").strip()
+        department = request.form.get("department", "").strip()
+        semester = request.form.get("semester", "").strip()
+        section = request.form.get("section", "").strip().upper()
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        if not fullname or not email or not department or not semester or not section:
+            error = "All fields are required. Please fill out all student details."
+            conn.close()
+            return render_template("edit_student.html", student=student, error=error)
+
+        try:
+            sem_num = int(semester)
+            if sem_num < 1 or sem_num > 8:
+                error = "Semester must be a valid academic semester between 1 and 8."
+                conn.close()
+                return render_template("edit_student.html", student=student, error=error)
+        except ValueError:
+            error = "Semester must be a valid number between 1 and 8."
+            conn.close()
+            return render_template("edit_student.html", student=student, error=error)
+
+        # Check if updated email is already taken by another student
+        cursor.execute("SELECT id FROM students WHERE email = ? AND usn != ?", (email, usn))
+        if cursor.fetchone():
+            conn.close()
+            error = f"The email '{email}' is already registered to another student."
+            return render_template("edit_student.html", student=student, error=error)
 
         try:
             cursor.execute("""
-            INSERT INTO subjects
-            (subject_code, subject_name, department, semester)
-            VALUES (?, ?, ?, ?)
-            """, (subject_code, subject_name, department, semester))
+                UPDATE students
+                SET fullname = ?, email = ?, department = ?, semester = ?, section = ?
+                WHERE usn = ?
+            """, (fullname, email, department, sem_num, section, usn))
             conn.commit()
-
-            if teacher_id:
-                cursor.execute("""
-                INSERT INTO teacher_subjects (teacher_id, subject_id)
-                VALUES (?, ?)
-                """, (teacher_id, subject_code))
-                conn.commit()
-
-        except sqlite3.IntegrityError:
             conn.close()
-            return "Subject already exists!"
+            return redirect(url_for("view_students", success=f"Student {usn} details updated successfully!"))
+        except Exception as e:
+            conn.close()
+            error = f"Error updating student: {str(e)}"
+            return render_template("edit_student.html", student=student, error=error)
 
+    conn.close()
+    return render_template("edit_student.html", student=student, error=error)
+
+
+# ---------------- DELETE STUDENT ----------------
+@app.route("/delete_student/<usn>", methods=["POST"])
+@role_required("admin")
+def delete_student(usn):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT fullname FROM students WHERE usn = ?", (usn,))
+    student = cursor.fetchone()
+
+    if not student:
         conn.close()
-        return redirect(url_for("admin"))
+        return redirect(url_for("view_students", error=f"Student '{usn}' not found."))
 
-    return render_template("add_subject.html")
+    try:
+        # Safely handle associated attendance and marks data
+        cursor.execute("DELETE FROM attendance WHERE student_id = ?", (usn,))
+        cursor.execute("DELETE FROM internal_marks WHERE student_id = ?", (usn,))
+        cursor.execute("DELETE FROM students WHERE usn = ?", (usn,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("view_students", success=f"Student {student['fullname']} ({usn}) was safely deleted."))
+    except Exception as e:
+        conn.close()
+        return redirect(url_for("view_students", error=f"Could not delete student: {str(e)}"))
 
+
+# ====================================================
+# TEACHER MANAGEMENT MODULE (DAY 4)
+# ====================================================
 
 # ---------------- ADD TEACHER ----------------
 @app.route("/add_teacher", methods=["GET", "POST"])
 @role_required("admin")
 def add_teacher():
+    error = None
     if request.method == "POST":
-        teacher_id = request.form["teacher_id"]
-        fullname = request.form["fullname"]
-        email = request.form["email"]
-        department = request.form["department"]
+        teacher_id = request.form.get("teacher_id", "").strip().upper()
+        fullname = request.form.get("fullname", "").strip()
+        email = request.form.get("email", "").strip()
+        department = request.form.get("department", "").strip()
+
+        if not teacher_id or not fullname or not email or not department:
+            error = "All fields are required. Please fill out all faculty details."
+            return render_template("add_teacher.html", error=error)
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Check duplicate Teacher ID
+        cursor.execute("SELECT id FROM teachers WHERE teacher_id = ?", (teacher_id,))
+        if cursor.fetchone():
+            conn.close()
+            error = f"Teacher ID '{teacher_id}' is already assigned to a faculty member."
+            return render_template("add_teacher.html", error=error)
+
+        # Check duplicate Email
+        cursor.execute("SELECT id FROM teachers WHERE email = ?", (email,))
+        if cursor.fetchone():
+            conn.close()
+            error = f"A faculty member with institutional email '{email}' already exists."
+            return render_template("add_teacher.html", error=error)
+
         try:
             cursor.execute("""
-            INSERT INTO teachers
-            (teacher_id, fullname, email, department)
-            VALUES (?, ?, ?, ?)
+                INSERT INTO teachers (teacher_id, fullname, email, department)
+                VALUES (?, ?, ?, ?)
             """, (teacher_id, fullname, email, department))
             conn.commit()
-
-        except sqlite3.IntegrityError:
             conn.close()
-            return "Teacher already exists!"
+            return redirect(url_for("view_teachers", success=f"Faculty member {fullname} ({teacher_id}) added successfully!"))
+        except Exception as e:
+            conn.close()
+            error = f"Database error while creating faculty member: {str(e)}"
+            return render_template("add_teacher.html", error=error)
 
-        conn.close()
-        return redirect(url_for("view_teachers"))
-
-    return render_template("add_teacher.html")
+    return render_template("add_teacher.html", error=error)
 
 
-# ---------------- VIEW TEACHERS ----------------
+# ---------------- VIEW TEACHERS (WITH SEARCH) ----------------
 @app.route("/view_teachers")
-@role_required("admin", "teacher")
+@role_required("admin")
 def view_teachers():
+    search_query = request.args.get("search", "").strip()
+    success = request.args.get("success")
+    error = request.args.get("error")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if search_query:
+        term = f"%{search_query}%"
+        cursor.execute("""
+            SELECT teacher_id, fullname, email, department
+            FROM teachers
+            WHERE teacher_id LIKE ? OR fullname LIKE ? OR email LIKE ? OR department LIKE ?
+            ORDER BY teacher_id ASC
+        """, (term, term, term, term))
+    else:
+        cursor.execute("""
+            SELECT teacher_id, fullname, email, department
+            FROM teachers
+            ORDER BY teacher_id ASC
+        """)
+
+    teachers_raw = cursor.fetchall()
+
+    teachers_list = []
+    for t in teachers_raw:
+        cursor.execute("""
+            SELECT subjects.subject_code, subjects.subject_name
+            FROM teacher_subjects
+            JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+            WHERE teacher_subjects.teacher_id = ?
+        """, (t["teacher_id"],))
+        assigned_subjects = cursor.fetchall()
+        teachers_list.append({
+            "teacher_id": t["teacher_id"],
+            "fullname": t["fullname"],
+            "email": t["email"],
+            "department": t["department"],
+            "subjects": assigned_subjects
+        })
+
+    conn.close()
+
+    return render_template(
+        "view_teachers.html",
+        teachers=teachers_list,
+        search_query=search_query,
+        success=success,
+        error=error
+    )
+
+
+# ---------------- VIEW SINGLE TEACHER DETAILS ----------------
+@app.route("/view_teacher/<teacher_id>")
+@role_required("admin")
+def view_teacher(teacher_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT teacher_id, fullname, email, department
-    FROM teachers
-    """)
-    teachers = cursor.fetchall()
+        SELECT teacher_id, fullname, email, department
+        FROM teachers
+        WHERE teacher_id = ?
+    """, (teacher_id,))
+    teacher = cursor.fetchone()
+
+    if not teacher:
+        conn.close()
+        return redirect(url_for("view_teachers", error=f"Faculty record '{teacher_id}' not found."))
+
+    cursor.execute("""
+        SELECT subjects.subject_code, subjects.subject_name, subjects.department, subjects.semester
+        FROM teacher_subjects
+        JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+        WHERE teacher_subjects.teacher_id = ?
+    """, (teacher_id,))
+    assigned_subjects = cursor.fetchall()
     conn.close()
 
-    return render_template("view_teachers.html", teachers=teachers)
+    return render_template("view_teacher.html", teacher=teacher, subjects=assigned_subjects)
+
+
+# ---------------- EDIT TEACHER ----------------
+@app.route("/edit_teacher/<teacher_id>", methods=["GET", "POST"])
+@role_required("admin")
+def edit_teacher(teacher_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE teacher_id = ?", (teacher_id,))
+    teacher = cursor.fetchone()
+
+    if not teacher:
+        conn.close()
+        return redirect(url_for("view_teachers", error=f"Faculty member '{teacher_id}' not found."))
+
+    error = None
+    if request.method == "POST":
+        fullname = request.form.get("fullname", "").strip()
+        email = request.form.get("email", "").strip()
+        department = request.form.get("department", "").strip()
+
+        if not fullname or not email or not department:
+            error = "All fields are required. Please complete all faculty fields."
+            conn.close()
+            return render_template("edit_teacher.html", teacher=teacher, error=error)
+
+        # Check if updated email is already taken by another teacher
+        cursor.execute("SELECT id FROM teachers WHERE email = ? AND teacher_id != ?", (email, teacher_id))
+        if cursor.fetchone():
+            conn.close()
+            error = f"The email '{email}' is already in use by another faculty member."
+            return render_template("edit_teacher.html", teacher=teacher, error=error)
+
+        try:
+            cursor.execute("""
+                UPDATE teachers
+                SET fullname = ?, email = ?, department = ?
+                WHERE teacher_id = ?
+            """, (fullname, email, department, teacher_id))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("view_teachers", success=f"Faculty member {teacher_id} details updated successfully!"))
+        except Exception as e:
+            conn.close()
+            error = f"Error updating faculty member: {str(e)}"
+            return render_template("edit_teacher.html", teacher=teacher, error=error)
+
+    conn.close()
+    return render_template("edit_teacher.html", teacher=teacher, error=error)
+
+
+# ---------------- DELETE TEACHER ----------------
+@app.route("/delete_teacher/<teacher_id>", methods=["POST"])
+@role_required("admin")
+def delete_teacher(teacher_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT fullname FROM teachers WHERE teacher_id = ?", (teacher_id,))
+    teacher = cursor.fetchone()
+
+    if not teacher:
+        conn.close()
+        return redirect(url_for("view_teachers", error=f"Faculty member '{teacher_id}' not found."))
+
+    try:
+        # Safely clean up teacher-subject mappings and session logs for this teacher
+        cursor.execute("DELETE FROM teacher_subjects WHERE teacher_id = ?", (teacher_id,))
+        cursor.execute("DELETE FROM practical_sessions WHERE teacher_id = ?", (teacher_id,))
+        cursor.execute("DELETE FROM attendance WHERE teacher_id = ?", (teacher_id,))
+        cursor.execute("DELETE FROM teachers WHERE teacher_id = ?", (teacher_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("view_teachers", success=f"Faculty member {teacher['fullname']} ({teacher_id}) was safely removed."))
+    except Exception as e:
+        conn.close()
+        return redirect(url_for("view_teachers", error=f"Could not delete faculty member: {str(e)}"))
+
+
+# ====================================================
+# SUBJECT MANAGEMENT MODULE (DAY 4)
+# ====================================================
+
+# ---------------- ADD SUBJECT ----------------
+@app.route("/add_subject", methods=["GET", "POST"])
+@role_required("admin")
+def add_subject():
+    error = None
+    if request.method == "POST":
+        subject_code = request.form.get("subject_code", "").strip().upper()
+        subject_name = request.form.get("subject_name", "").strip()
+        department = request.form.get("department", "").strip()
+        semester = request.form.get("semester", "").strip()
+
+        if not subject_code or not subject_name or not department or not semester:
+            error = "All fields are required. Please fill out the complete subject form."
+            return render_template("add_subject.html", error=error)
+
+        try:
+            sem_num = int(semester)
+            if sem_num < 1 or sem_num > 8:
+                error = "Semester must be a valid academic semester between 1 and 8."
+                return render_template("add_subject.html", error=error)
+        except ValueError:
+            error = "Semester must be a valid number between 1 and 8."
+            return render_template("add_subject.html", error=error)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check duplicate subject_code
+        cursor.execute("SELECT id FROM subjects WHERE subject_code = ?", (subject_code,))
+        if cursor.fetchone():
+            conn.close()
+            error = f"A subject with code '{subject_code}' already exists in curriculum catalog."
+            return render_template("add_subject.html", error=error)
+
+        try:
+            cursor.execute("""
+                INSERT INTO subjects (subject_code, subject_name, department, semester)
+                VALUES (?, ?, ?, ?)
+            """, (subject_code, subject_name, department, sem_num))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("view_subjects", success=f"Subject {subject_name} ({subject_code}) added to catalog!"))
+        except Exception as e:
+            conn.close()
+            error = f"Database error while creating subject: {str(e)}"
+            return render_template("add_subject.html", error=error)
+
+    return render_template("add_subject.html", error=error)
+
+
+# ---------------- VIEW SUBJECTS (WITH SEARCH) ----------------
+@app.route("/view_subjects")
+@role_required("admin")
+def view_subjects():
+    search_query = request.args.get("search", "").strip()
+    success = request.args.get("success")
+    error = request.args.get("error")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if search_query:
+        term = f"%{search_query}%"
+        cursor.execute("""
+            SELECT subject_code, subject_name, department, semester
+            FROM subjects
+            WHERE subject_code LIKE ? OR subject_name LIKE ? OR department LIKE ?
+            ORDER BY subject_code ASC
+        """, (term, term, term))
+    else:
+        cursor.execute("""
+            SELECT subject_code, subject_name, department, semester
+            FROM subjects
+            ORDER BY subject_code ASC
+        """)
+
+    subjects_raw = cursor.fetchall()
+
+    subjects_list = []
+    for s in subjects_raw:
+        cursor.execute("""
+            SELECT teachers.teacher_id, teachers.fullname
+            FROM teacher_subjects
+            JOIN teachers ON teacher_subjects.teacher_id = teachers.teacher_id
+            WHERE teacher_subjects.subject_id = ?
+        """, (s["subject_code"],))
+        mapped_teachers = cursor.fetchall()
+        subjects_list.append({
+            "subject_code": s["subject_code"],
+            "subject_name": s["subject_name"],
+            "department": s["department"],
+            "semester": s["semester"],
+            "teachers": mapped_teachers
+        })
+
+    conn.close()
+
+    return render_template(
+        "view_subjects.html",
+        subjects=subjects_list,
+        search_query=search_query,
+        success=success,
+        error=error
+    )
+
+
+# ---------------- VIEW SINGLE SUBJECT DETAILS ----------------
+@app.route("/view_subject/<subject_code>")
+@role_required("admin")
+def view_subject(subject_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT subject_code, subject_name, department, semester
+        FROM subjects
+        WHERE subject_code = ?
+    """, (subject_code,))
+    subject = cursor.fetchone()
+
+    if not subject:
+        conn.close()
+        return redirect(url_for("view_subjects", error=f"Subject record '{subject_code}' not found."))
+
+    cursor.execute("""
+        SELECT teachers.teacher_id, teachers.fullname, teachers.email, teachers.department
+        FROM teacher_subjects
+        JOIN teachers ON teacher_subjects.teacher_id = teachers.teacher_id
+        WHERE teacher_subjects.subject_id = ?
+    """, (subject_code,))
+    faculty = cursor.fetchall()
+    conn.close()
+
+    return render_template("view_subject.html", subject=subject, teachers=faculty)
+
+
+# ---------------- EDIT SUBJECT ----------------
+@app.route("/edit_subject/<subject_code>", methods=["GET", "POST"])
+@role_required("admin")
+def edit_subject(subject_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    if not subject:
+        conn.close()
+        return redirect(url_for("view_subjects", error=f"Subject '{subject_code}' not found."))
+
+    error = None
+    if request.method == "POST":
+        subject_name = request.form.get("subject_name", "").strip()
+        department = request.form.get("department", "").strip()
+        semester = request.form.get("semester", "").strip()
+
+        if not subject_name or not department or not semester:
+            error = "All fields are required. Please complete all subject fields."
+            conn.close()
+            return render_template("edit_subject.html", subject=subject, error=error)
+
+        try:
+            sem_num = int(semester)
+            if sem_num < 1 or sem_num > 8:
+                error = "Semester must be a valid academic semester between 1 and 8."
+                conn.close()
+                return render_template("edit_subject.html", subject=subject, error=error)
+        except ValueError:
+            error = "Semester must be a valid number between 1 and 8."
+            conn.close()
+            return render_template("edit_subject.html", subject=subject, error=error)
+
+        try:
+            cursor.execute("""
+                UPDATE subjects
+                SET subject_name = ?, department = ?, semester = ?
+                WHERE subject_code = ?
+            """, (subject_name, department, sem_num, subject_code))
+            conn.commit()
+            conn.close()
+            return redirect(url_for("view_subjects", success=f"Subject {subject_code} updated successfully!"))
+        except Exception as e:
+            conn.close()
+            error = f"Error updating subject: {str(e)}"
+            return render_template("edit_subject.html", subject=subject, error=error)
+
+    conn.close()
+    return render_template("edit_subject.html", subject=subject, error=error)
+
+
+# ---------------- DELETE SUBJECT ----------------
+@app.route("/delete_subject/<subject_code>", methods=["POST"])
+@role_required("admin")
+def delete_subject(subject_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT subject_name FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    if not subject:
+        conn.close()
+        return redirect(url_for("view_subjects", error=f"Subject '{subject_code}' not found."))
+
+    try:
+        # Safely clean up associated teacher mappings, sessions, attendance, and marks
+        cursor.execute("DELETE FROM teacher_subjects WHERE subject_id = ?", (subject_code,))
+        cursor.execute("DELETE FROM practical_sessions WHERE subject_id = ?", (subject_code,))
+        cursor.execute("DELETE FROM attendance WHERE subject_id = ?", (subject_code,))
+        cursor.execute("DELETE FROM internal_marks WHERE subject_id = ?", (subject_code,))
+        cursor.execute("DELETE FROM subjects WHERE subject_code = ?", (subject_code,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("view_subjects", success=f"Subject {subject['subject_name']} ({subject_code}) was safely deleted."))
+    except Exception as e:
+        conn.close()
+        return redirect(url_for("view_subjects", error=f"Could not delete subject: {str(e)}"))
 
 
 # ---------------- ASSIGN SUBJECT ----------------
@@ -375,21 +911,28 @@ def assign_subject():
     cursor = conn.cursor()
 
     if request.method == "POST":
-        teacher_id = request.form["teacher_id"]
-        subject_code = request.form["subject_code"]
+        teacher_id = request.form.get("teacher_id", "").strip()
+        subject_code = request.form.get("subject_code", "").strip()
 
-        cursor.execute("""
-        INSERT INTO teacher_subjects
-        (teacher_id, subject_id)
-        VALUES (?, ?)
-        """, (teacher_id, subject_code))
-        conn.commit()
+        if teacher_id and subject_code:
+            # Check if mapping already exists
+            cursor.execute("""
+                SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?
+            """, (teacher_id, subject_code))
+            if not cursor.fetchone():
+                cursor.execute("""
+                    INSERT INTO teacher_subjects (teacher_id, subject_id)
+                    VALUES (?, ?)
+                """, (teacher_id, subject_code))
+                conn.commit()
+
         conn.close()
-
-        return redirect(url_for("view_teachers"))
+        if session.get("role") == "admin":
+            return redirect(url_for("view_subjects", success=f"Subject {subject_code} assigned to faculty {teacher_id}!"))
+        return redirect(url_for("teacher"))
 
     # Load teachers
-    cursor.execute("SELECT teacher_id, fullname FROM teachers")
+    cursor.execute("SELECT teacher_id, fullname FROM teachers ORDER BY fullname ASC")
     teachers = cursor.fetchall()
 
     # Load subjects

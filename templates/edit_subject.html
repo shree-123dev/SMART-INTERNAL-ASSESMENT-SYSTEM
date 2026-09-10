@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Subject | SIAMS Admin</title>
+    <title>Edit Subject | SIAMS Admin</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
@@ -24,10 +24,10 @@
 
             <div class="auth-header">
                 <div class="auth-logo" style="background: #fef3c7; color: #d97706;">
-                    <i class="fas fa-book-open" style="font-size: 24px;"></i>
+                    <i class="fas fa-edit" style="font-size: 24px;"></i>
                 </div>
-                <h2>Create Academic Subject</h2>
-                <p>Register new curriculum subject & course module</p>
+                <h2>Edit Subject Details</h2>
+                <p>Update curriculum course for <strong>{{ subject['subject_code'] }}</strong></p>
             </div>
 
             {% if error %}
@@ -37,20 +37,20 @@
             </div>
             {% endif %}
 
-            <form action="{{ url_for('add_subject') }}" method="POST">
+            <form action="{{ url_for('edit_subject', subject_code=subject['subject_code']) }}" method="POST">
 
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
                     <div class="form-group">
-                        <label for="subject_code">Subject Code</label>
+                        <label for="subject_code_display">Subject Code (Permanent)</label>
                         <div class="input-wrapper">
-                            <i class="fas fa-code"></i>
+                            <i class="fas fa-lock" style="color: var(--text-muted);"></i>
                             <input
                                 type="text"
-                                id="subject_code"
-                                name="subject_code"
+                                id="subject_code_display"
                                 class="form-control"
-                                placeholder="e.g. CS501"
-                                required>
+                                value="{{ subject['subject_code'] }}"
+                                disabled
+                                style="background: var(--bg-main); cursor: not-allowed; font-weight: 700;">
                         </div>
                     </div>
 
@@ -63,6 +63,7 @@
                                 id="subject_name"
                                 name="subject_name"
                                 class="form-control"
+                                value="{{ subject['subject_name'] }}"
                                 placeholder="e.g. Database Management Systems"
                                 required>
                         </div>
@@ -79,6 +80,7 @@
                                 id="department"
                                 name="department"
                                 class="form-control"
+                                value="{{ subject['department'] }}"
                                 placeholder="e.g. Computer Science"
                                 required>
                         </div>
@@ -93,6 +95,7 @@
                                 id="semester"
                                 name="semester"
                                 class="form-control"
+                                value="{{ subject['semester'] }}"
                                 placeholder="e.g. 5"
                                 min="1"
                                 max="8"
@@ -101,20 +104,23 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 24px;">
-                    <button type="submit" class="auth-btn" style="background: linear-gradient(135deg, #d97706, #b45309);">
-                        <i class="fas fa-plus-circle" style="margin-right: 8px;"></i> Save Subject to Catalog
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button type="submit" class="auth-btn" style="flex: 1; background: linear-gradient(135deg, #d97706, #b45309);">
+                        <i class="fas fa-save" style="margin-right: 8px;"></i> Save Changes
                     </button>
+                    <a href="{{ url_for('view_subjects') }}" class="btn btn-outline" style="display: flex; align-items: center; justify-content: center; padding: 0 20px;">
+                        Cancel
+                    </a>
                 </div>
 
             </form>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
-                <a href="{{ url_for('view_subjects') }}" style="color: #d97706; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-book"></i> Subject Catalog
+                <a href="{{ url_for('view_subject', subject_code=subject['subject_code']) }}" style="color: #d97706; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-eye"></i> View Details
                 </a>
-                <a href="{{ url_for('admin') }}" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <a href="{{ url_for('view_subjects') }}" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-arrow-left"></i> Back to Subjects
                 </a>
             </div>
 

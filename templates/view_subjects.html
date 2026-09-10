@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Students | SIAMS Admin</title>
+    <title>Manage Subjects | SIAMS Admin</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -26,22 +26,22 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: var(--card-bg); padding: 24px 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin-bottom: 24px;">
             <div>
                 <div style="display: flex; align-items: center; gap: 14px;">
-                    <div style="width: 46px; height: 46px; border-radius: var(--radius-md); background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 22px;">
-                        <i class="fas fa-user-graduate"></i>
+                    <div style="width: 46px; height: 46px; border-radius: var(--radius-md); background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="fas fa-book-open"></i>
                     </div>
                     <div>
-                        <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">Student Management Directory</h1>
-                        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Search, inspect, edit, and manage all enrolled students</p>
+                        <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">Course & Subject Catalog</h1>
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Manage academic curriculum, theory subjects, and laboratory modules</p>
                     </div>
                 </div>
             </div>
 
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span class="badge badge-primary" style="font-size: 14px; padding: 8px 16px;">
-                    <i class="fas fa-users" style="margin-right: 6px;"></i> Total: {{ students|length }} Students
+                <span class="badge badge-warning" style="font-size: 14px; padding: 8px 16px;">
+                    <i class="fas fa-book" style="margin-right: 6px;"></i> Total: {{ subjects|length }} Subjects
                 </span>
-                <a href="{{ url_for('add_student') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
-                    <i class="fas fa-plus"></i> Add Student
+                <a href="{{ url_for('add_subject') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-plus"></i> Add Subject
                 </a>
                 <a href="{{ url_for('admin') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
                     <i class="fas fa-arrow-left"></i> Admin Dashboard
@@ -64,86 +64,89 @@
         </div>
         {% endif %}
 
-        <!-- Search & Filter Controls -->
+        <!-- Search Controls -->
         <div style="background: var(--card-bg); padding: 18px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <form action="{{ url_for('view_students') }}" method="GET" style="display: flex; gap: 12px; flex: 1; max-width: 600px;">
+            <form action="{{ url_for('view_subjects') }}" method="GET" style="display: flex; gap: 12px; flex: 1; max-width: 600px;">
                 <div class="input-wrapper" style="flex: 1;">
                     <i class="fas fa-search"></i>
                     <input
                         type="text"
-                        id="studentSearchInput"
+                        id="subjectSearchInput"
                         name="search"
                         value="{{ search_query or '' }}"
                         class="form-control"
-                        placeholder="Search students by USN, Name, Email, or Department..."
+                        placeholder="Search subjects by Code, Subject Name, or Department..."
                         style="width: 100%;">
                 </div>
                 <button type="submit" class="btn btn-primary" style="padding: 0 20px;">
                     Search
                 </button>
                 {% if search_query %}
-                <a href="{{ url_for('view_students') }}" class="btn btn-outline" style="padding: 0 16px; display: flex; align-items: center;">
+                <a href="{{ url_for('view_subjects') }}" class="btn btn-outline" style="padding: 0 16px; display: flex; align-items: center;">
                     Reset
                 </a>
                 {% endif %}
             </form>
 
             <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
-                <i class="fas fa-info-circle"></i> Showing <strong>{{ students|length }}</strong> records
+                <i class="fas fa-info-circle"></i> Showing <strong>{{ subjects|length }}</strong> catalog subjects
             </span>
         </div>
 
-        <!-- Student Data Table -->
+        <!-- Subject Data Table -->
         <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm);">
-            {% if students %}
+            {% if subjects %}
             <div style="overflow-x: auto;">
-                <table class="data-table" id="studentsTable" style="width: 100%; border-collapse: collapse;">
+                <table class="data-table" id="subjectsTable" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
-                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">USN</th>
-                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Full Name</th>
-                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Email</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Code</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Name</th>
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Department</th>
-                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Sem / Sec</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Semester</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assigned Teachers</th>
                             <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for student in students %}
-                        <tr class="student-row" style="border-bottom: 1px solid var(--border); transition: var(--transition);">
+                        {% for sub in subjects %}
+                        <tr class="subject-row" style="border-bottom: 1px solid var(--border); transition: var(--transition);">
                             <td style="padding: 14px 20px;">
-                                <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 4px 8px; border-radius: 6px; font-size: 13px;">
-                                    {{ student[0] }}
+                                <span style="font-weight: 700; font-family: monospace; color: #d97706; background: #fef3c7; padding: 4px 8px; border-radius: 6px; font-size: 13px;">
+                                    {{ sub.subject_code }}
                                 </span>
                             </td>
                             <td style="padding: 14px 20px;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;">
-                                        {{ student[1][0]|upper }}
-                                    </div>
-                                    <span style="font-weight: 600; color: var(--text-main);">{{ student[1] }}</span>
+                                <span style="font-weight: 600; color: var(--text-main);">{{ sub.subject_name }}</span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <span class="badge badge-info">{{ sub.department }}</span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <span class="badge badge-warning">Semester {{ sub.semester }}</span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                {% if sub.teachers %}
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    {% for tch in sub.teachers %}
+                                    <span class="badge badge-primary" style="font-size: 11px;">
+                                        {{ tch['fullname'] }} ({{ tch['teacher_id'] }})
+                                    </span>
+                                    {% endfor %}
                                 </div>
-                            </td>
-                            <td style="padding: 14px 20px; color: var(--text-muted); font-size: 14px;">
-                                <i class="fas fa-envelope" style="font-size: 12px; margin-right: 6px; color: var(--text-light);"></i>
-                                {{ student[2] }}
-                            </td>
-                            <td style="padding: 14px 20px;">
-                                <span class="badge badge-info">{{ student[3] }}</span>
-                            </td>
-                            <td style="padding: 14px 20px;">
-                                <span class="badge badge-warning" style="margin-right: 4px;">Sem {{ student[4] }}</span>
-                                <span class="badge badge-success">Sec {{ student[5] }}</span>
+                                {% else %}
+                                <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">Unassigned</span>
+                                {% endif %}
                             </td>
                             <td style="padding: 14px 20px; text-align: center;">
                                 <div style="display: inline-flex; align-items: center; gap: 8px;">
                                     <!-- View Action -->
-                                    <a href="{{ url_for('view_student', usn=student[0]) }}" class="badge badge-primary" style="text-decoration: none; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;" title="View Student Profile">
+                                    <a href="{{ url_for('view_subject', subject_code=sub.subject_code) }}" class="badge badge-primary" style="text-decoration: none; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;" title="View Subject Details">
                                         <i class="fas fa-eye"></i> View
                                     </a>
 
                                     <!-- Edit Action -->
-                                    <a href="{{ url_for('edit_student', usn=student[0]) }}" class="badge badge-info" style="text-decoration: none; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; background: #e0f2fe; color: #0369a1;" title="Edit Student">
+                                    <a href="{{ url_for('edit_subject', subject_code=sub.subject_code) }}" class="badge badge-info" style="text-decoration: none; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; background: #e0f2fe; color: #0369a1;" title="Edit Subject">
                                         <i class="fas fa-edit"></i> Edit
                                     </a>
 
@@ -152,8 +155,8 @@
                                         type="button"
                                         class="badge badge-danger"
                                         style="border: none; cursor: pointer; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #dc2626;"
-                                        onclick="confirmDeleteStudent('{{ student[0] }}', '{{ student[1] }}')"
-                                        title="Delete Student">
+                                        onclick="confirmDeleteSubject('{{ sub.subject_code }}', '{{ sub.subject_name }}')"
+                                        title="Delete Subject">
                                         <i class="fas fa-trash-alt"></i> Delete
                                     </button>
                                 </div>
@@ -166,22 +169,22 @@
             {% else %}
             <div style="text-align: center; padding: 60px 20px;">
                 <div style="width: 70px; height: 70px; border-radius: 50%; background: var(--bg-main); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 16px;">
-                    <i class="fas fa-user-slash"></i>
+                    <i class="fas fa-book"></i>
                 </div>
-                <h3 style="color: var(--text-main); font-size: 18px; font-weight: 700;">No Students Found</h3>
+                <h3 style="color: var(--text-main); font-size: 18px; font-weight: 700;">No Subjects Found</h3>
                 <p style="color: var(--text-muted); font-size: 14px; margin-top: 6px; max-width: 400px; margin-left: auto; margin-right: auto;">
                     {% if search_query %}
-                    No student records matched your search query "<strong>{{ search_query }}</strong>".
+                    No course subjects matched your search query "<strong>{{ search_query }}</strong>".
                     {% else %}
-                    No students have been enrolled in the system yet.
+                    No academic course subjects have been added to the curriculum yet.
                     {% endif %}
                 </p>
                 <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
                     {% if search_query %}
-                    <a href="{{ url_for('view_students') }}" class="btn btn-outline">Clear Search</a>
+                    <a href="{{ url_for('view_subjects') }}" class="btn btn-outline">Clear Search</a>
                     {% endif %}
-                    <a href="{{ url_for('add_student') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-plus"></i> Add New Student
+                    <a href="{{ url_for('add_subject') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-plus"></i> Add New Subject
                     </a>
                 </div>
             </div>
@@ -191,22 +194,22 @@
     </div>
 
     <!-- ================= DELETE CONFIRMATION MODAL ================= -->
-    <div id="deleteModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div id="deleteSubjectModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
         <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 440px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); animation: fadeIn 0.2s ease;">
             <div style="width: 50px; height: 50px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px;">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Confirm Student Deletion</h3>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Confirm Subject Deletion</h3>
             <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
-                Are you sure you want to delete <strong id="deleteStudentName"></strong> (USN: <span id="deleteStudentUSN"></span>)? This action will remove the student record safely from the database.
+                Are you sure you want to delete <strong id="deleteSubjectName"></strong> (<span id="deleteSubjectCode"></span>)? All teacher assignments for this subject will be safely removed.
             </p>
 
-            <form id="deleteStudentForm" method="POST" action="" style="display: flex; justify-content: flex-end; gap: 12px;">
-                <button type="button" class="btn btn-outline" onclick="closeDeleteModal()" style="padding: 8px 18px;">
+            <form id="deleteSubjectForm" method="POST" action="" style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn btn-outline" onclick="closeDeleteSubjectModal()" style="padding: 8px 18px;">
                     Cancel
                 </button>
                 <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 8px 18px;">
-                    <i class="fas fa-trash-alt" style="margin-right: 6px;"></i> Yes, Delete Student
+                    <i class="fas fa-trash-alt" style="margin-right: 6px;"></i> Yes, Delete Subject
                 </button>
             </form>
         </div>
@@ -215,9 +218,9 @@
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script>
         // Real-time client side search filtering
-        document.getElementById('studentSearchInput')?.addEventListener('input', function (e) {
+        document.getElementById('subjectSearchInput')?.addEventListener('input', function (e) {
             const term = e.target.value.toLowerCase().trim();
-            const rows = document.querySelectorAll('.student-row');
+            const rows = document.querySelectorAll('.subject-row');
             rows.forEach(row => {
                 const text = row.innerText.toLowerCase();
                 if (text.includes(term)) {
@@ -229,23 +232,23 @@
         });
 
         // Delete confirmation modal handler
-        function confirmDeleteStudent(usn, name) {
-            document.getElementById('deleteStudentName').innerText = name;
-            document.getElementById('deleteStudentUSN').innerText = usn;
-            document.getElementById('deleteStudentForm').action = "/delete_student/" + encodeURIComponent(usn);
-            const modal = document.getElementById('deleteModal');
+        function confirmDeleteSubject(code, name) {
+            document.getElementById('deleteSubjectName').innerText = name;
+            document.getElementById('deleteSubjectCode').innerText = code;
+            document.getElementById('deleteSubjectForm').action = "/delete_subject/" + encodeURIComponent(code);
+            const modal = document.getElementById('deleteSubjectModal');
             modal.style.display = 'flex';
         }
 
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').style.display = 'none';
+        function closeDeleteSubjectModal() {
+            document.getElementById('deleteSubjectModal').style.display = 'none';
         }
 
         // Close modal on click outside
         window.onclick = function(event) {
-            const modal = document.getElementById('deleteModal');
+            const modal = document.getElementById('deleteSubjectModal');
             if (event.target === modal) {
-                closeDeleteModal();
+                closeDeleteSubjectModal();
             }
         };
     </script>
