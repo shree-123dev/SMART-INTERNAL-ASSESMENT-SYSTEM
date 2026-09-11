@@ -41,6 +41,9 @@
                 <a href="{{ url_for('view_subjects') }}"><i class="fas fa-book"></i> Manage Subjects</a>
             </li>
             <li>
+                <a href="{{ url_for('view_assignments') }}"><i class="fas fa-link"></i> Subject Assignments</a>
+            </li>
+            <li>
                 <a href="{{ url_for('assign_subject') }}"><i class="fas fa-tasks"></i> Assign Subject</a>
             </li>
         </ul>
@@ -84,7 +87,7 @@
                 <div class="stat-info">
                     <h3>Total Students</h3>
                     <div class="stat-value" style="color: #4f46e5;">{{ total_students }}</div>
-                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Enrolled across all batches</span>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Enrolled roster</span>
                 </div>
                 <div class="stat-icon icon-blue">
                     <i class="fas fa-user-graduate"></i>
@@ -95,7 +98,7 @@
                 <div class="stat-info">
                     <h3>Total Teachers</h3>
                     <div class="stat-value" style="color: #0284c7;">{{ total_teachers }}</div>
-                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Academic faculty members</span>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Academic faculty</span>
                 </div>
                 <div class="stat-icon icon-sky">
                     <i class="fas fa-chalkboard-teacher"></i>
@@ -106,7 +109,7 @@
                 <div class="stat-info">
                     <h3>Total Subjects</h3>
                     <div class="stat-value" style="color: #d97706;">{{ total_subjects }}</div>
-                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Curriculum & Lab courses</span>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Curriculum courses</span>
                 </div>
                 <div class="stat-icon icon-amber">
                     <i class="fas fa-book-open"></i>
@@ -115,12 +118,12 @@
 
             <div class="stat-card">
                 <div class="stat-info">
-                    <h3>Database Status</h3>
-                    <div class="stat-value" style="color: #10b981; font-size: 20px; font-weight: 700;">Active</div>
-                    <span style="font-size: 12px; color: #10b981; font-weight: 600;"><i class="fas fa-check-circle"></i> SQLite Operational</span>
+                    <h3>Active Assignments</h3>
+                    <div class="stat-value" style="color: #10b981;">{{ total_assignments }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Teacher ↔ Subject links</span>
                 </div>
                 <div class="stat-icon icon-green">
-                    <i class="fas fa-database"></i>
+                    <i class="fas fa-link"></i>
                 </div>
             </div>
         </section>
@@ -142,17 +145,6 @@
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
 
-            <a href="{{ url_for('add_student') }}" class="action-tile">
-                <div class="action-tile-icon icon-blue" style="background: #eef2ff;">
-                    <i class="fas fa-user-plus"></i>
-                </div>
-                <div class="action-tile-text">
-                    <h4>Add Student</h4>
-                    <p>Enroll a new student into the department</p>
-                </div>
-                <i class="fas fa-chevron-right action-tile-arrow"></i>
-            </a>
-
             <a href="{{ url_for('view_teachers') }}" class="action-tile">
                 <div class="action-tile-icon icon-sky">
                     <i class="fas fa-chalkboard-teacher"></i>
@@ -160,17 +152,6 @@
                 <div class="action-tile-text">
                     <h4>Manage Teachers</h4>
                     <p>View, search, edit, and delete faculty members</p>
-                </div>
-                <i class="fas fa-chevron-right action-tile-arrow"></i>
-            </a>
-
-            <a href="{{ url_for('add_teacher') }}" class="action-tile">
-                <div class="action-tile-icon icon-sky" style="background: #e0f2fe;">
-                    <i class="fas fa-user-tie"></i>
-                </div>
-                <div class="action-tile-text">
-                    <h4>Add Teacher</h4>
-                    <p>Create instructor credentials and profile</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
@@ -186,13 +167,35 @@
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
 
-            <a href="{{ url_for('add_subject') }}" class="action-tile">
-                <div class="action-tile-icon icon-amber" style="background: #fef3c7;">
-                    <i class="fas fa-plus-circle"></i>
+            <a href="{{ url_for('view_assignments') }}" class="action-tile">
+                <div class="action-tile-icon icon-green">
+                    <i class="fas fa-tasks"></i>
                 </div>
                 <div class="action-tile-text">
-                    <h4>Add Subject</h4>
-                    <p>Register new academic and practical courses</p>
+                    <h4>View Assignments</h4>
+                    <p>Inspect all teacher-subject mappings and manage links</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('assign_subject') }}" class="action-tile">
+                <div class="action-tile-icon icon-green" style="background: #ecfdf5;">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Assign Subject</h4>
+                    <p>Map curriculum subjects to designated instructors</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('add_student') }}" class="action-tile">
+                <div class="action-tile-icon icon-blue" style="background: #eef2ff;">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Add Student</h4>
+                    <p>Enroll a new student into the department</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>
@@ -215,7 +218,7 @@
                     </div>
                     <div class="profile-detail-item">
                         <span>Active Module</span>
-                        <span style="color: var(--primary); font-weight: 800;">Day 4 Admin Management</span>
+                        <span style="color: var(--accent); font-weight: 800;">Day 5 Teacher-Subject Assignment</span>
                     </div>
                     <div class="profile-detail-item">
                         <span>Security Level</span>
@@ -229,13 +232,13 @@
                     <h3><i class="fas fa-layer-group" style="color: #0284c7;"></i> Module Quick Links</h3>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <a href="{{ url_for('view_students') }}" class="action-tile" style="padding: 14px 18px; margin-bottom: 0;">
-                        <div class="action-tile-icon icon-blue" style="width: 38px; height: 38px; font-size: 16px;">
-                            <i class="fas fa-user-graduate"></i>
+                    <a href="{{ url_for('view_assignments') }}" class="action-tile" style="padding: 14px 18px; margin-bottom: 0;">
+                        <div class="action-tile-icon icon-green" style="width: 38px; height: 38px; font-size: 16px;">
+                            <i class="fas fa-link"></i>
                         </div>
                         <div class="action-tile-text">
-                            <h4>Student Management Directory</h4>
-                            <p>Current Count: {{ total_students }} active records</p>
+                            <h4>Subject Assignment Directory</h4>
+                            <p>Current Active Mappings: {{ total_assignments }}</p>
                         </div>
                         <i class="fas fa-arrow-right action-tile-arrow"></i>
                     </a>

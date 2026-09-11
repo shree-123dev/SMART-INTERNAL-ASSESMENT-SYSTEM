@@ -209,15 +209,40 @@ def teacher():
     email = session.get("email")
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT teacher_id FROM teachers WHERE email = ?", (email,))
+
+    # Determine logged-in teacher identity from session
+    cursor.execute("""
+        SELECT teacher_id, fullname, email, department
+        FROM teachers
+        WHERE email = ?
+    """, (email,))
     tch = cursor.fetchone()
-    teacher_id = tch["teacher_id"] if tch else None
+
+    assigned_subjects = []
+    teacher_id = None
+    if tch:
+        teacher_id = tch["teacher_id"]
+        # JOIN query to retrieve ONLY subjects assigned to this logged-in teacher
+        cursor.execute("""
+            SELECT subjects.subject_code,
+                   subjects.subject_name,
+                   subjects.department,
+                   subjects.semester
+            FROM teacher_subjects
+            JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+            WHERE teacher_subjects.teacher_id = ?
+            ORDER BY subjects.subject_code ASC
+        """, (teacher_id,))
+        assigned_subjects = cursor.fetchall()
+
     conn.close()
 
     return render_template(
         "teacher.html",
         fullname=session.get("fullname", "Faculty Member"),
-        teacher_id=teacher_id
+        teacher=tch,
+        teacher_id=teacher_id,
+        assigned_subjects=assigned_subjects
     )
 
 
@@ -238,6 +263,9 @@ def admin():
     cursor.execute("SELECT COUNT(*) FROM subjects")
     total_subjects = cursor.fetchone()[0]
 
+    cursor.execute("SELECT COUNT(*) FROM teacher_subjects")
+    total_assignments = cursor.fetchone()[0]
+
     conn.close()
 
     return render_template(
@@ -245,7 +273,8 @@ def admin():
         fullname=session.get("fullname", "Administrator"),
         total_students=total_students,
         total_teachers=total_teachers,
-        total_subjects=total_subjects
+        total_subjects=total_subjects,
+        total_assignments=total_assignments
     )
 
 
@@ -903,72 +932,221 @@ def delete_subject(subject_code):
         return redirect(url_for("view_subjects", error=f"Could not delete subject: {str(e)}"))
 
 
-# ---------------- ASSIGN SUBJECT ----------------
+# ====================================================
+# TEACHER-SUBJECT ASSIGNMENT MODULE (DAY 5)
+# ====================================================
+
+# ---------------- ASSIGN SUBJECT TO TEACHER (ADMIN ONLY) ----------------
 @app.route("/assign_subject", methods=["GET", "POST"])
-@role_required("admin", "teacher")
+@role_required("admin")
 def assign_subject():
     conn = get_db_connection()
     cursor = conn.cursor()
+    error = None
 
     if request.method == "POST":
         teacher_id = request.form.get("teacher_id", "").strip()
         subject_code = request.form.get("subject_code", "").strip()
 
-        if teacher_id and subject_code:
-            # Check if mapping already exists
-            cursor.execute("""
-                SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?
-            """, (teacher_id, subject_code))
-            if not cursor.fetchone():
+        # Validation: check empty fields
+        if not teacher_id or not subject_code:
+            error = "Please select both a faculty instructor and a curriculum subject."
+        else:
+            # Validate teacher exists
+            cursor.execute("SELECT fullname FROM teachers WHERE teacher_id = ?", (teacher_id,))
+            teacher_row = cursor.fetchone()
+
+            # Validate subject exists
+            cursor.execute("SELECT subject_name FROM subjects WHERE subject_code = ?", (subject_code,))
+            subject_row = cursor.fetchone()
+
+            if not teacher_row:
+                error = f"Selected faculty member (ID: {teacher_id}) was not found."
+            elif not subject_row:
+                error = f"Selected subject (Code: {subject_code}) was not found."
+            else:
+                # Check for duplicate assignment
                 cursor.execute("""
-                    INSERT INTO teacher_subjects (teacher_id, subject_id)
-                    VALUES (?, ?)
+                    SELECT id FROM teacher_subjects
+                    WHERE teacher_id = ? AND subject_id = ?
                 """, (teacher_id, subject_code))
-                conn.commit()
+                existing_assignment = cursor.fetchone()
 
-        conn.close()
-        if session.get("role") == "admin":
-            return redirect(url_for("view_subjects", success=f"Subject {subject_code} assigned to faculty {teacher_id}!"))
-        return redirect(url_for("teacher"))
+                if existing_assignment:
+                    error = f"Subject is already assigned to this teacher."
+                else:
+                    # Parameterized INSERT into teacher_subjects
+                    try:
+                        cursor.execute("""
+                            INSERT INTO teacher_subjects (teacher_id, subject_id)
+                            VALUES (?, ?)
+                        """, (teacher_id, subject_code))
+                        conn.commit()
+                        conn.close()
+                        return redirect(url_for("view_assignments", success=f"Subject assigned successfully."))
+                    except Exception as e:
+                        error = f"Failed to assign subject: {str(e)}"
 
-    # Load teachers
-    cursor.execute("SELECT teacher_id, fullname FROM teachers ORDER BY fullname ASC")
+    # Load all teachers and subjects for dropdown selectors
+    cursor.execute("SELECT teacher_id, fullname, department FROM teachers ORDER BY fullname ASC")
     teachers = cursor.fetchall()
 
-    # Load subjects
-    cursor.execute("SELECT subject_code, subject_name FROM subjects")
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects ORDER BY subject_code ASC")
     subjects = cursor.fetchall()
     conn.close()
 
     return render_template(
         "assign_subject.html",
         teachers=teachers,
-        subjects=subjects
+        subjects=subjects,
+        error=error
     )
 
 
-# ---------------- TEACHER SUBJECTS ----------------
-@app.route("/teacher_subjects/<teacher_id>")
-@role_required("teacher", "admin")
-def teacher_subjects(teacher_id):
+# ---------------- VIEW ALL ASSIGNMENTS (ADMIN ONLY) ----------------
+@app.route("/view_assignments")
+@role_required("admin")
+def view_assignments():
+    search_query = request.args.get("search", "").strip()
+    success = request.args.get("success")
+    error = request.args.get("error")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if search_query:
+        term = f"%{search_query}%"
+        # JOIN query with search filtering
+        cursor.execute("""
+            SELECT teacher_subjects.id AS assignment_id,
+                   teachers.teacher_id,
+                   teachers.fullname AS teacher_name,
+                   teachers.department AS teacher_department,
+                   subjects.subject_code,
+                   subjects.subject_name,
+                   subjects.department AS subject_department,
+                   subjects.semester
+            FROM teacher_subjects
+            JOIN teachers ON teacher_subjects.teacher_id = teachers.teacher_id
+            JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+            WHERE teachers.fullname LIKE ? OR teachers.teacher_id LIKE ? OR subjects.subject_name LIKE ? OR subjects.subject_code LIKE ?
+            ORDER BY teachers.fullname ASC, subjects.subject_code ASC
+        """, (term, term, term, term))
+    else:
+        # Standard JOIN query to retrieve all active assignments
+        cursor.execute("""
+            SELECT teacher_subjects.id AS assignment_id,
+                   teachers.teacher_id,
+                   teachers.fullname AS teacher_name,
+                   teachers.department AS teacher_department,
+                   subjects.subject_code,
+                   subjects.subject_name,
+                   subjects.department AS subject_department,
+                   subjects.semester
+            FROM teacher_subjects
+            JOIN teachers ON teacher_subjects.teacher_id = teachers.teacher_id
+            JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+            ORDER BY teachers.fullname ASC, subjects.subject_code ASC
+        """)
+
+    assignments = cursor.fetchall()
+    conn.close()
+
+    return render_template(
+        "view_assignments.html",
+        assignments=assignments,
+        search_query=search_query,
+        success=success,
+        error=error
+    )
+
+
+# ---------------- REMOVE ASSIGNMENT (ADMIN ONLY) ----------------
+@app.route("/remove_assignment/<int:assignment_id>", methods=["POST"])
+@role_required("admin")
+def remove_assignment(assignment_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT subjects.subject_code,
-           subjects.subject_name
-    FROM teacher_subjects
-    JOIN subjects
-    ON teacher_subjects.subject_id = subjects.subject_code
-    WHERE teacher_subjects.teacher_id = ?
-    """, (teacher_id,))
+        SELECT teacher_subjects.id,
+               teachers.fullname AS teacher_name,
+               subjects.subject_name
+        FROM teacher_subjects
+        JOIN teachers ON teacher_subjects.teacher_id = teachers.teacher_id
+        JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+        WHERE teacher_subjects.id = ?
+    """, (assignment_id,))
+    assignment = cursor.fetchone()
+
+    if not assignment:
+        conn.close()
+        return redirect(url_for("view_assignments", error="Assignment record not found."))
+
+    try:
+        # ONLY delete from teacher_subjects (preserves teacher, subject, students, attendance, marks)
+        cursor.execute("DELETE FROM teacher_subjects WHERE id = ?", (assignment_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("view_assignments", success=f"Assignment for {assignment['teacher_name']} ({assignment['subject_name']}) removed successfully."))
+    except Exception as e:
+        conn.close()
+        return redirect(url_for("view_assignments", error=f"Could not remove assignment: {str(e)}"))
+
+
+# ---------------- TEACHER ASSIGNED SUBJECTS (ISOLATED) ----------------
+@app.route("/teacher_subjects")
+@app.route("/teacher_subjects/<teacher_id>")
+@role_required("teacher", "admin")
+def teacher_subjects(teacher_id=None):
+    user_role = session.get("role")
+    user_email = session.get("email")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # If teacher role, strictly enforce viewing ONLY their own assigned subjects
+    if user_role == "teacher":
+        cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (user_email,))
+        logged_in_teacher = cursor.fetchone()
+        if not logged_in_teacher:
+            conn.close()
+            return redirect(url_for("teacher"))
+
+        actual_teacher_id = logged_in_teacher["teacher_id"]
+        # If teacher attempts to access another teacher's ID in URL, override to own ID
+        target_teacher_id = actual_teacher_id
+        teacher_name = logged_in_teacher["fullname"]
+    else:
+        # Admin can view any teacher's subjects
+        if not teacher_id:
+            conn.close()
+            return redirect(url_for("view_assignments"))
+        target_teacher_id = teacher_id
+        cursor.execute("SELECT fullname FROM teachers WHERE teacher_id = ?", (teacher_id,))
+        t = cursor.fetchone()
+        teacher_name = t["fullname"] if t else teacher_id
+
+    # JOIN query to retrieve assigned subjects
+    cursor.execute("""
+        SELECT subjects.subject_code,
+               subjects.subject_name,
+               subjects.department,
+               subjects.semester
+        FROM teacher_subjects
+        JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+        WHERE teacher_subjects.teacher_id = ?
+        ORDER BY subjects.subject_code ASC
+    """, (target_teacher_id,))
 
     subjects = cursor.fetchall()
     conn.close()
 
     return render_template(
         "teacher_subjects.html",
-        subjects=subjects
+        subjects=subjects,
+        teacher_id=target_teacher_id,
+        teacher_name=teacher_name
     )
 
 

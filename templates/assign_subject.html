@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assign Subject to Faculty | SIAMS</title>
+    <title>Assign Subject to Faculty | SIAMS Admin</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
@@ -27,10 +27,17 @@
                     <i class="fas fa-link" style="font-size: 24px;"></i>
                 </div>
                 <h2>Assign Subject to Faculty</h2>
-                <p>Link course subjects with responsible instructors for practical sessions</p>
+                <p>Map curriculum course subjects to authorized faculty teachers</p>
             </div>
 
-            <form action="/assign_subject" method="POST">
+            {% if error %}
+            <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px 16px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <i class="fas fa-exclamation-circle" style="font-size: 16px;"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('assign_subject') }}" method="POST">
 
                 <div class="form-group">
                     <label for="teacher_id">Select Faculty Instructor</label>
@@ -39,8 +46,8 @@
                         <select id="teacher_id" name="teacher_id" class="form-control" required style="cursor: pointer;">
                             <option value="">-- Choose Instructor --</option>
                             {% for teacher in teachers %}
-                            <option value="{{ teacher[0] }}">
-                                {{ teacher[1] }} (ID: {{ teacher[0] }})
+                            <option value="{{ teacher['teacher_id'] }}">
+                                {{ teacher['fullname'] }} (ID: {{ teacher['teacher_id'] }} - {{ teacher['department'] }})
                             </option>
                             {% endfor %}
                         </select>
@@ -54,30 +61,30 @@
                         <select id="subject_code" name="subject_code" class="form-control" required style="cursor: pointer;">
                             <option value="">-- Choose Subject Course --</option>
                             {% for subject in subjects %}
-                            <option value="{{ subject[0] }}">
-                                {{ subject[1] }} [Code: {{ subject[0] }}]
+                            <option value="{{ subject['subject_code'] }}">
+                                {{ subject['subject_name'] }} [{{ subject['subject_code'] }}] (Sem {{ subject['semester'] }} - {{ subject['department'] }})
                             </option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
 
-                <div style="background: #f8fafc; border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 16px; margin: 20px 0; font-size: 13px; color: var(--text-muted); display: flex; gap: 12px; align-items: flex-start;">
+                <div style="background: var(--bg-main); border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 16px; margin: 20px 0; font-size: 13px; color: var(--text-muted); display: flex; gap: 12px; align-items: flex-start;">
                     <i class="fas fa-info-circle" style="color: var(--primary); font-size: 16px; margin-top: 2px;"></i>
-                    <span>Once assigned, the subject will appear on the faculty member's portal to conduct practical sessions and mark QR attendance.</span>
+                    <span>Once assigned, the subject will appear exclusively on the assigned teacher's dashboard. Duplicate assignments are automatically prevented.</span>
                 </div>
 
                 <div>
                     <button type="submit" class="auth-btn" style="background: linear-gradient(135deg, #10b981, #059669);">
-                        <i class="fas fa-check-circle" style="margin-right: 8px;"></i> Complete Subject Assignment
+                        <i class="fas fa-check-circle" style="margin-right: 8px;"></i> Assign Subject
                     </button>
                 </div>
 
             </form>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
-                <a href="{{ url_for('view_teachers') }}" style="color: #10b981; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-users"></i> View Faculty
+                <a href="{{ url_for('view_assignments') }}" style="color: #10b981; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-list-check"></i> View All Assignments
                 </a>
                 <a href="{{ url_for('admin') }}" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard

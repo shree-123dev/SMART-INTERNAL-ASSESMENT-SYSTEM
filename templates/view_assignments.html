@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Assignments | SIAMS Admin</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 1280px; margin: 30px auto; padding: 0 24px;">
+
+        <!-- Top Header & Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: var(--card-bg); padding: 24px 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin-bottom: 24px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="width: 46px; height: 46px; border-radius: var(--radius-md); background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div>
+                        <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">Teacher-Subject Assignments</h1>
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Manage teaching assignments and course responsibilities</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="badge badge-success" style="font-size: 14px; padding: 8px 16px;">
+                    <i class="fas fa-link" style="margin-right: 6px;"></i> Total: {{ assignments|length }} Mappings
+                </span>
+                <a href="{{ url_for('assign_subject') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-plus"></i> Assign Subject
+                </a>
+                <a href="{{ url_for('admin') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-arrow-left"></i> Admin Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Alert Notifications -->
+        {% if success %}
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+            <i class="fas fa-check-circle" style="font-size: 18px;"></i>
+            <span>{{ success }}</span>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+            <i class="fas fa-exclamation-circle" style="font-size: 18px;"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Search Controls -->
+        <div style="background: var(--card-bg); padding: 18px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <form action="{{ url_for('view_assignments') }}" method="GET" style="display: flex; gap: 12px; flex: 1; max-width: 600px;">
+                <div class="input-wrapper" style="flex: 1;">
+                    <i class="fas fa-search"></i>
+                    <input
+                        type="text"
+                        id="assignmentSearchInput"
+                        name="search"
+                        value="{{ search_query or '' }}"
+                        class="form-control"
+                        placeholder="Search assignments by Teacher Name, ID, Subject Name, or Code..."
+                        style="width: 100%;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="padding: 0 20px;">
+                    Search
+                </button>
+                {% if search_query %}
+                <a href="{{ url_for('view_assignments') }}" class="btn btn-outline" style="padding: 0 16px; display: flex; align-items: center;">
+                    Reset
+                </a>
+                {% endif %}
+            </form>
+
+            <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
+                <i class="fas fa-info-circle"></i> Showing <strong>{{ assignments|length }}</strong> active assignment mappings
+            </span>
+        </div>
+
+        <!-- Assignments Data Table -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm);">
+            {% if assignments %}
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="assignmentsTable" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Teacher ID</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Faculty Teacher</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Code</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Name</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Department</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Semester</th>
+                            <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in assignments %}
+                        <tr class="assignment-row" style="border-bottom: 1px solid var(--border); transition: var(--transition);">
+                            <td style="padding: 14px 20px;">
+                                <span style="font-weight: 700; font-family: monospace; color: var(--secondary-hover); background: #e0f2fe; padding: 4px 8px; border-radius: 6px; font-size: 13px;">
+                                    {{ item['teacher_id'] }}
+                                </span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #06b6d4); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">
+                                        {{ item['teacher_name'][0]|upper }}
+                                    </div>
+                                    <div>
+                                        <span style="font-weight: 600; color: var(--text-main);">{{ item['teacher_name'] }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <span style="font-weight: 700; font-family: monospace; color: #d97706; background: #fef3c7; padding: 4px 8px; border-radius: 6px; font-size: 13px;">
+                                    {{ item['subject_code'] }}
+                                </span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <span style="font-weight: 600; color: var(--text-main);">{{ item['subject_name'] }}</span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <span class="badge badge-info">{{ item['subject_department'] }}</span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <span class="badge badge-warning">Sem {{ item['semester'] }}</span>
+                            </td>
+                            <td style="padding: 14px 20px; text-align: center;">
+                                <button
+                                    type="button"
+                                    class="badge badge-danger"
+                                    style="border: none; cursor: pointer; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #dc2626;"
+                                    onclick="confirmRemoveAssignment({{ item['assignment_id'] }}, '{{ item['teacher_name'] }}', '{{ item['subject_name'] }} ({{ item['subject_code'] }})')"
+                                    title="Remove Assignment">
+                                    <i class="fas fa-trash-alt"></i> Remove
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 60px 20px;">
+                <div style="width: 70px; height: 70px; border-radius: 50%; background: var(--bg-main); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 16px;">
+                    <i class="fas fa-link-slash"></i>
+                </div>
+                <h3 style="color: var(--text-main); font-size: 18px; font-weight: 700;">No Subject Assignments Found</h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 6px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    {% if search_query %}
+                    No assignments matched your search query "<strong>{{ search_query }}</strong>".
+                    {% else %}
+                    No course subjects have been mapped to faculty members yet.
+                    {% endif %}
+                </p>
+                <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
+                    {% if search_query %}
+                    <a href="{{ url_for('view_assignments') }}" class="btn btn-outline">Clear Search</a>
+                    {% endif %}
+                    <a href="{{ url_for('assign_subject') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-plus"></i> Assign First Subject
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ================= REMOVE ASSIGNMENT CONFIRMATION MODAL ================= -->
+    <div id="removeAssignmentModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 440px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); animation: fadeIn 0.2s ease;">
+            <div style="width: 50px; height: 50px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Confirm Remove Assignment</h3>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+                Are you sure you want to remove the assignment of <strong id="removeSubjectName"></strong> from <strong id="removeTeacherName"></strong>? This will only remove the subject mapping and will NOT delete the teacher or subject records.
+            </p>
+
+            <form id="removeAssignmentForm" method="POST" action="" style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn btn-outline" onclick="closeRemoveAssignmentModal()" style="padding: 8px 18px;">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 8px 18px;">
+                    <i class="fas fa-trash-alt" style="margin-right: 6px;"></i> Yes, Remove Assignment
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script>
+        // Real-time client side search filtering
+        document.getElementById('assignmentSearchInput')?.addEventListener('input', function (e) {
+            const term = e.target.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.assignment-row');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                if (text.includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Remove assignment modal handler
+        function confirmRemoveAssignment(id, teacherName, subjectName) {
+            document.getElementById('removeTeacherName').innerText = teacherName;
+            document.getElementById('removeSubjectName').innerText = subjectName;
+            document.getElementById('removeAssignmentForm').action = "/remove_assignment/" + encodeURIComponent(id);
+            const modal = document.getElementById('removeAssignmentModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeRemoveAssignmentModal() {
+            document.getElementById('removeAssignmentModal').style.display = 'none';
+        }
+
+        // Close modal on click outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('removeAssignmentModal');
+            if (event.target === modal) {
+                closeRemoveAssignmentModal();
+            }
+        };
+    </script>
+</body>
+</html>
