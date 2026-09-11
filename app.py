@@ -1,13 +1,14 @@
-from datetime import date
-from functools import wraps
-from flask import Flask, render_template, request, redirect, session, url_for, flash
+import os
 import sqlite3
 import qrcode
 import json
+from datetime import date
+from functools import wraps
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from database import init_db, get_db_connection
-from generate_qr import generate_student_qr
+from generate_qr import generate_student_qr, ensure_student_qr
 
 app = Flask(__name__)
 app.secret_key = "siams_secret_key_2026"
@@ -193,13 +194,62 @@ def student():
     """, (email,))
 
     student_data = cursor.fetchone()
+
+    # Automatically ensure QR code exists for this student
+    if student_data:
+        usn = student_data["usn"]
+        qr_file = ensure_student_qr(usn, student_data["fullname"], student_data["department"], student_data["semester"])
+        if student_data["qr_path"] != qr_file:
+            cursor.execute("UPDATE students SET qr_path = ? WHERE usn = ?", (qr_file, usn))
+            conn.commit()
+            cursor.execute("""
+                SELECT usn, fullname, email, department, semester, section, qr_path
+                FROM students
+                WHERE email = ?
+            """, (email,))
+            student_data = cursor.fetchone()
+
     conn.close()
 
     return render_template(
         "student.html",
         student=student_data,
-        fullname=session.get("fullname", "Student")
+        fullname=session.get("fullname", (student_data["fullname"] if student_data else "Student"))
     )
+
+
+# ---------------- MY QR CODE (STUDENT ROLE PROTECTED) ----------------
+@app.route("/my_qr")
+@role_required("student")
+def my_qr():
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT usn, fullname, email, department, semester, section, qr_path
+        FROM students
+        WHERE email = ?
+    """, (email,))
+    student_data = cursor.fetchone()
+
+    if not student_data:
+        conn.close()
+        return redirect(url_for("student"))
+
+    qr_file = ensure_student_qr(student_data["usn"], student_data["fullname"], student_data["department"], student_data["semester"])
+    if student_data["qr_path"] != qr_file:
+        cursor.execute("UPDATE students SET qr_path = ? WHERE usn = ?", (qr_file, student_data["usn"]))
+        conn.commit()
+        cursor.execute("""
+            SELECT usn, fullname, email, department, semester, section, qr_path
+            FROM students
+            WHERE email = ?
+        """, (email,))
+        student_data = cursor.fetchone()
+
+    conn.close()
+    return render_template("student_qr_card.html", student=student_data, is_admin=False)
 
 
 # ---------------- TEACHER DASHBOARD (ROLE PROTECTED) ----------------
@@ -487,10 +537,77 @@ def delete_student(usn):
         cursor.execute("DELETE FROM students WHERE usn = ?", (usn,))
         conn.commit()
         conn.close()
+
+        # Clean up QR file if exists
+        qr_file = os.path.join("static", "qr", f"{usn}.png")
+        if os.path.exists(qr_file):
+            try:
+                os.remove(qr_file)
+            except Exception:
+                pass
+
         return redirect(url_for("view_students", success=f"Student {student['fullname']} ({usn}) was safely deleted."))
     except Exception as e:
         conn.close()
         return redirect(url_for("view_students", error=f"Could not delete student: {str(e)}"))
+
+
+# ---------------- ADMIN REGENERATE STUDENT QR ----------------
+@app.route("/admin/generate_qr/<usn>", methods=["POST"])
+@role_required("admin")
+def admin_generate_qr(usn):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT usn, fullname, department, semester FROM students WHERE usn = ?", (usn,))
+    student = cursor.fetchone()
+
+    if not student:
+        conn.close()
+        return redirect(url_for("view_students", error=f"Student record '{usn}' not found."))
+
+    try:
+        qr_path = generate_student_qr(student["usn"], student["fullname"], student["department"], student["semester"])
+        cursor.execute("UPDATE students SET qr_path = ? WHERE usn = ?", (qr_path, usn))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("view_students", success=f"QR Code regenerated successfully for student {student['fullname']} ({usn})!"))
+    except Exception as e:
+        conn.close()
+        return redirect(url_for("view_students", error=f"Could not generate QR code: {str(e)}"))
+
+
+# ---------------- ADMIN VIEW STUDENT QR CARD ----------------
+@app.route("/admin/student_qr/<usn>")
+@role_required("admin")
+def admin_student_qr(usn):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT usn, fullname, email, department, semester, section, qr_path
+        FROM students
+        WHERE usn = ?
+    """, (usn,))
+    student = cursor.fetchone()
+
+    if not student:
+        conn.close()
+        return redirect(url_for("view_students", error=f"Student record '{usn}' not found."))
+
+    qr_file = ensure_student_qr(student["usn"], student["fullname"], student["department"], student["semester"])
+    if student["qr_path"] != qr_file:
+        cursor.execute("UPDATE students SET qr_path = ? WHERE usn = ?", (qr_file, student["usn"]))
+        conn.commit()
+        cursor.execute("""
+            SELECT usn, fullname, email, department, semester, section, qr_path
+            FROM students
+            WHERE usn = ?
+        """, (usn,))
+        student = cursor.fetchone()
+
+    conn.close()
+    return render_template("student_qr_card.html", student=student, is_admin=True)
 
 
 # ====================================================

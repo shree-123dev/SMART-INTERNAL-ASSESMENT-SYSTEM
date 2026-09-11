@@ -7,6 +7,7 @@
     <title>Student Portal | SIAMS</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +32,10 @@
                 <a href="{{ url_for('student') }}"><i class="fas fa-home"></i> Student Home</a>
             </li>
             <li>
-                <a href="#profile"><i class="fas fa-id-card"></i> My Profile & QR</a>
+                <a href="{{ url_for('my_qr') }}"><i class="fas fa-qrcode"></i> My QR Pass</a>
+            </li>
+            <li>
+                <a href="#profile"><i class="fas fa-id-card"></i> My Profile</a>
             </li>
             <li>
                 <a href="#performance"><i class="fas fa-chart-line"></i> IA Assessment</a>
@@ -130,29 +134,29 @@
                 <div class="profile-detail-list">
                     <div class="profile-detail-item">
                         <span>Full Name</span>
-                        <span>{% if student and student[1] %}{{ student[1] }}{% else %}Shreeram Adhari{% endif %}</span>
+                        <span><strong>{% if student and student['fullname'] %}{{ student['fullname'] }}{% else %}{{ session.get('fullname', 'Enrolled Student') }}{% endif %}</strong></span>
                     </div>
                     <div class="profile-detail-item">
                         <span>University Seat No (USN)</span>
-                        <span style="color: var(--primary); font-family: monospace; font-size: 15px;">
-                            {% if student and student[0] %}{{ student[0] }}{% else %}VU2F2425005{% endif %}
+                        <span style="color: var(--primary); font-family: monospace; font-size: 15px; font-weight: 700;">
+                            {% if student and student['usn'] %}{{ student['usn'] }}{% else %}N/A{% endif %}
                         </span>
                     </div>
                     <div class="profile-detail-item">
                         <span>Department</span>
-                        <span>{% if student and student[3] %}{{ student[3] }}{% else %}Computer Science & Engg{% endif %}</span>
+                        <span>{% if student and student['department'] %}{{ student['department'] }}{% else %}Computer Science & Engg{% endif %}</span>
                     </div>
                     <div class="profile-detail-item">
                         <span>Current Semester</span>
-                        <span>{% if student and student[4] %}{{ student[4] }}th Semester{% else %}5th Semester{% endif %}</span>
+                        <span>{% if student and student['semester'] %}{{ student['semester'] }}th Semester{% else %}5th Semester{% endif %}</span>
                     </div>
                     <div class="profile-detail-item">
                         <span>Section</span>
-                        <span>{% if student and student[5] %}Section {{ student[5] }}{% else %}Section A{% endif %}</span>
+                        <span>{% if student and student['section'] %}Section {{ student['section'] }}{% else %}Section A{% endif %}</span>
                     </div>
                     <div class="profile-detail-item">
                         <span>Email ID</span>
-                        <span>{% if student and student[2] %}{{ student[2] }}{% else %}student@college.edu{% endif %}</span>
+                        <span>{% if student and student['email'] %}{{ student['email'] }}{% else %}{{ session.get('email', 'student@college.edu') }}{% endif %}</span>
                     </div>
                 </div>
             </div>
@@ -165,20 +169,35 @@
                 </div>
 
                 <div class="qr-preview-box">
-                    {% if student and student[6] %}
-                    <img src="{{ url_for('static', filename=student[6].replace('static/', '')) }}" alt="Student QR Code">
-                    {% elif student and student[0] %}
-                    <img src="{{ url_for('static', filename='qrcodes/' + student[0] + '.png') }}" alt="Student QR Code" onerror="this.src='{{ url_for('static', filename='qrcodes/AIML010.png') }}'">
-                    {% else %}
-                    <img src="{{ url_for('static', filename='qrcodes/AIML010.png') }}" alt="Sample Student QR">
-                    {% endif %}
-                    <p>Present this QR code to your faculty scanner for instant lab attendance.</p>
+                    <div style="background: #ffffff; padding: 14px; border-radius: var(--radius-md); border: 2px dashed rgba(79, 70, 229, 0.25); display: inline-block; margin-bottom: 12px;">
+                        {% if student and student['qr_path'] %}
+                        <img src="{{ url_for('static', filename=student['qr_path'].replace('static/', '')) }}" alt="{{ student['usn'] }} QR Code" style="width: 170px; height: 170px; object-fit: contain; display: block;">
+                        {% elif student and student['usn'] %}
+                        <img src="{{ url_for('static', filename='qr/' ~ student['usn'] ~ '.png') }}" alt="{{ student['usn'] }} QR Code" style="width: 170px; height: 170px; object-fit: contain; display: block;">
+                        {% else %}
+                        <div style="width: 170px; height: 170px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: var(--text-muted);">
+                            <i class="fas fa-qrcode" style="font-size: 60px;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 16px 0;">
+                        Present this verified QR code to your lab instructor for contactless session attendance.
+                    </p>
                 </div>
 
-                <div style="margin-top: 18px;">
-                    <a href="{{ url_for('home') }}" class="action-btn action-btn-primary">
-                        <i class="fas fa-home"></i> Return to Homepage
+                <div style="margin-top: 12px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                    <a href="{{ url_for('my_qr') }}" class="btn btn-primary" style="font-size: 13px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-id-card"></i> Digital Pass Card
                     </a>
+                    {% if student and student['qr_path'] %}
+                    <a href="{{ url_for('static', filename=student['qr_path'].replace('static/', '')) }}" download="{{ student['usn'] }}_QR.png" class="btn btn-outline" style="font-size: 13px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-download"></i> Download QR
+                    </a>
+                    {% elif student and student['usn'] %}
+                    <a href="{{ url_for('static', filename='qr/' ~ student['usn'] ~ '.png') }}" download="{{ student['usn'] }}_QR.png" class="btn btn-outline" style="font-size: 13px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-download"></i> Download QR
+                    </a>
+                    {% endif %}
                 </div>
             </div>
 

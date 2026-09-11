@@ -31,7 +31,7 @@
                     </div>
                     <div>
                         <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">Student Management Directory</h1>
-                        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Search, inspect, edit, and manage all enrolled students</p>
+                        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Search, inspect, edit, and manage all enrolled students & QR passes</p>
                     </div>
                 </div>
             </div>
@@ -105,6 +105,7 @@
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Email</th>
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Department</th>
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Sem / Sec</th>
+                            <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">QR Pass</th>
                             <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Actions</th>
                         </tr>
                     </thead>
@@ -134,6 +135,21 @@
                             <td style="padding: 14px 20px;">
                                 <span class="badge badge-warning" style="margin-right: 4px;">Sem {{ student[4] }}</span>
                                 <span class="badge badge-success">Sec {{ student[5] }}</span>
+                            </td>
+                            <td style="padding: 14px 20px; text-align: center;">
+                                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <button
+                                        type="button"
+                                        class="badge badge-primary"
+                                        style="border: none; cursor: pointer; padding: 6px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                                        onclick="openQuickQRModal('{{ student[0] }}', '{{ student[1] }}', '{{ student[6] or '' }}')"
+                                        title="Quick QR Preview">
+                                        <i class="fas fa-qrcode"></i> View QR
+                                    </button>
+                                    <a href="{{ url_for('admin_student_qr', usn=student[0]) }}" class="badge badge-outline" style="text-decoration: none; padding: 6px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); color: var(--text-muted);" title="Print Full ID Card">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                </div>
                             </td>
                             <td style="padding: 14px 20px; text-align: center;">
                                 <div style="display: inline-flex; align-items: center; gap: 8px;">
@@ -190,6 +206,41 @@
 
     </div>
 
+    <!-- ================= QUICK QR PREVIEW MODAL ================= -->
+    <div id="quickQRModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 420px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); text-align: center; animation: fadeIn 0.2s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">Student QR Pass</h3>
+                <button type="button" onclick="closeQuickQRModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <h4 id="modalStudentName" style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0 0 4px 0;"></h4>
+                <span id="modalStudentUSN" style="font-family: monospace; font-weight: 700; color: var(--primary); background: #eef2ff; padding: 2px 10px; border-radius: 4px; font-size: 13px;"></span>
+            </div>
+
+            <div style="display: inline-block; padding: 12px; background: #ffffff; border-radius: var(--radius-md); border: 2px dashed rgba(79, 70, 229, 0.3); margin-bottom: 20px;">
+                <img id="modalQRImage" src="" alt="Student QR Code" style="width: 180px; height: 180px; object-fit: contain; display: block;">
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <a id="modalPrintLink" href="#" class="btn btn-primary" style="padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-id-card"></i> Full Pass Card
+                </a>
+                <a id="modalDownloadLink" href="#" download="" class="btn btn-outline" style="padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-download"></i> Download
+                </a>
+                <form id="modalRegenerateForm" method="POST" action="" style="display: inline;">
+                    <button type="submit" class="btn btn-outline" style="padding: 8px 16px; font-size: 13px; color: var(--primary); border-color: var(--primary); display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-sync-alt"></i> Regenerate
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= DELETE CONFIRMATION MODAL ================= -->
     <div id="deleteModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
         <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 440px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); animation: fadeIn 0.2s ease;">
@@ -228,6 +279,25 @@
             });
         });
 
+        // Quick QR Preview Modal
+        function openQuickQRModal(usn, name, qrPath) {
+            document.getElementById('modalStudentName').innerText = name;
+            document.getElementById('modalStudentUSN').innerText = usn;
+            
+            const imagePath = qrPath ? ('/' + qrPath.replace(/^static\//, 'static/')) : ('/static/qr/' + encodeURIComponent(usn) + '.png');
+            document.getElementById('modalQRImage').src = imagePath;
+            document.getElementById('modalDownloadLink').href = imagePath;
+            document.getElementById('modalDownloadLink').download = usn + '_QR.png';
+            document.getElementById('modalPrintLink').href = '/admin/student_qr/' + encodeURIComponent(usn);
+            document.getElementById('modalRegenerateForm').action = '/admin/generate_qr/' + encodeURIComponent(usn);
+            
+            document.getElementById('quickQRModal').style.display = 'flex';
+        }
+
+        function closeQuickQRModal() {
+            document.getElementById('quickQRModal').style.display = 'none';
+        }
+
         // Delete confirmation modal handler
         function confirmDeleteStudent(usn, name) {
             document.getElementById('deleteStudentName').innerText = name;
@@ -243,9 +313,13 @@
 
         // Close modal on click outside
         window.onclick = function(event) {
-            const modal = document.getElementById('deleteModal');
-            if (event.target === modal) {
+            const delModal = document.getElementById('deleteModal');
+            const qrModal = document.getElementById('quickQRModal');
+            if (event.target === delModal) {
                 closeDeleteModal();
+            }
+            if (event.target === qrModal) {
+                closeQuickQRModal();
             }
         };
     </script>
