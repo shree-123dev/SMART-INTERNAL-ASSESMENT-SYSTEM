@@ -2,7 +2,7 @@ import os
 import sqlite3
 import qrcode
 import json
-from datetime import date
+from datetime import date, datetime
 from functools import wraps
 from flask import Flask, render_template, request, redirect, session, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -270,6 +270,9 @@ def teacher():
 
     assigned_subjects = []
     teacher_id = None
+    active_session = None
+    total_sessions = 0
+
     if tch:
         teacher_id = tch["teacher_id"]
         # JOIN query to retrieve ONLY subjects assigned to this logged-in teacher
@@ -285,6 +288,22 @@ def teacher():
         """, (teacher_id,))
         assigned_subjects = cursor.fetchall()
 
+        # Query currently active session for this teacher (Day 7)
+        cursor.execute("""
+            SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                   s.subject_name, s.department, s.semester, t.fullname as teacher_name
+            FROM practical_sessions ps
+            JOIN subjects s ON ps.subject_id = s.subject_code
+            JOIN teachers t ON ps.teacher_id = t.teacher_id
+            WHERE ps.teacher_id = ? AND ps.status = 'active'
+            ORDER BY ps.id DESC LIMIT 1
+        """, (teacher_id,))
+        active_session = cursor.fetchone()
+
+        # Count total practical sessions conducted by this faculty member
+        cursor.execute("SELECT COUNT(*) FROM practical_sessions WHERE teacher_id = ?", (teacher_id,))
+        total_sessions = cursor.fetchone()[0]
+
     conn.close()
 
     return render_template(
@@ -292,7 +311,9 @@ def teacher():
         fullname=session.get("fullname", "Faculty Member"),
         teacher=tch,
         teacher_id=teacher_id,
-        assigned_subjects=assigned_subjects
+        assigned_subjects=assigned_subjects,
+        active_session=active_session,
+        total_sessions=total_sessions
     )
 
 
@@ -1267,29 +1288,263 @@ def teacher_subjects(teacher_id=None):
     )
 
 
-# ---------------- PRACTICAL SESSION ----------------
+# ====================================================
+# PRACTICAL SESSION MANAGEMENT MODULE (DAY 7)
+# ====================================================
+
+# ---------------- START PRACTICAL SESSION ----------------
+@app.route("/start_session", methods=["POST"])
+@app.route("/start_session/<subject_code>", methods=["POST"])
+@role_required("teacher")
+def start_session(subject_code=None):
+    if not subject_code:
+        subject_code = request.form.get("subject_code", "").strip().upper()
+    else:
+        subject_code = subject_code.strip().upper()
+
+    if not subject_code:
+        flash("Please select an assigned subject to start a practical session.", "error")
+        return redirect(url_for("teacher"))
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Determine logged-in teacher identity
+    cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile record not found. Please contact administration.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    # Verify subject is assigned to this teacher
+    cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+    if not cursor.fetchone():
+        conn.close()
+        flash(f"Unauthorized: Subject '{subject_code}' is not assigned to your faculty profile.", "error")
+        return redirect(url_for("teacher"))
+
+    # Rule: Prevent multiple concurrent active sessions for the same teacher
+    cursor.execute("""
+        SELECT ps.id, ps.subject_id, s.subject_name
+        FROM practical_sessions ps
+        JOIN subjects s ON ps.subject_id = s.subject_code
+        WHERE ps.teacher_id = ? AND ps.status = 'active'
+    """, (teacher_id,))
+    active = cursor.fetchone()
+    if active:
+        conn.close()
+        flash(f"You already have an active practical session in progress for '{active['subject_name']}' ({active['subject_id']}). Please conclude it before beginning a new session.", "error")
+        return redirect(url_for("teacher"))
+
+    # Create new practical session
+    session_date = date.today().isoformat()
+    start_time = datetime.now().strftime("%I:%M %p")
+
+    try:
+        cursor.execute("""
+            INSERT INTO practical_sessions (teacher_id, subject_id, session_date, start_time, status)
+            VALUES (?, ?, ?, ?, 'active')
+        """, (teacher_id, subject_code, session_date, start_time))
+        conn.commit()
+        conn.close()
+        flash(f"Practical session for '{subject_code}' initiated successfully at {start_time}!", "success")
+        return redirect(url_for("teacher"))
+    except Exception as e:
+        conn.close()
+        flash(f"Database error while starting practical session: {str(e)}", "error")
+        return redirect(url_for("teacher"))
+
+
+# ---------------- END PRACTICAL SESSION ----------------
+@app.route("/end_session/<int:session_id>", methods=["POST"])
+@role_required("teacher")
+def end_session(session_id):
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT teacher_id FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    cursor.execute("""
+        SELECT ps.id, ps.teacher_id, ps.subject_id, ps.status, s.subject_name
+        FROM practical_sessions ps
+        JOIN subjects s ON ps.subject_id = s.subject_code
+        WHERE ps.id = ?
+    """, (session_id,))
+    sess_row = cursor.fetchone()
+
+    if not sess_row:
+        conn.close()
+        flash("Practical session record not found.", "error")
+        return redirect(url_for("teacher"))
+
+    # Security: Ensure teacher can only end their own session
+    if sess_row["teacher_id"] != teacher_id:
+        conn.close()
+        flash("Unauthorized: You cannot conclude a session initiated by another faculty instructor.", "error")
+        return redirect(url_for("teacher"))
+
+    if sess_row["status"] == "completed":
+        conn.close()
+        flash("This practical session has already been completed.", "info")
+        return redirect(url_for("teacher"))
+
+    end_time = datetime.now().strftime("%I:%M %p")
+
+    try:
+        cursor.execute("""
+            UPDATE practical_sessions
+            SET end_time = ?, status = 'completed'
+            WHERE id = ? AND teacher_id = ?
+        """, (end_time, session_id, teacher_id))
+        conn.commit()
+        conn.close()
+        flash(f"Practical session for '{sess_row['subject_name']}' completed and ended successfully at {end_time}!", "success")
+        return redirect(url_for("teacher"))
+    except Exception as e:
+        conn.close()
+        flash(f"Error concluding practical session: {str(e)}", "error")
+        return redirect(url_for("teacher"))
+
+
+# ---------------- PRACTICAL SESSIONS HISTORY LOG ----------------
+@app.route("/practical_sessions")
+@app.route("/session_history")
+@role_required("teacher", "admin")
+def practical_sessions_history():
+    email = session.get("email")
+    role = session.get("role")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    teacher_id = None
+    teacher_name = session.get("fullname", "Faculty Member")
+    assigned_subjects = []
+
+    if role == "teacher":
+        cursor.execute("SELECT teacher_id, fullname, department FROM teachers WHERE email = ?", (email,))
+        tch = cursor.fetchone()
+        if tch:
+            teacher_id = tch["teacher_id"]
+            teacher_name = tch["fullname"]
+
+            # Assigned subjects for dropdown
+            cursor.execute("""
+                SELECT subjects.subject_code, subjects.subject_name
+                FROM teacher_subjects
+                JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+                WHERE teacher_subjects.teacher_id = ?
+                ORDER BY subjects.subject_code ASC
+            """, (teacher_id,))
+            assigned_subjects = cursor.fetchall()
+
+            # Sessions strictly for this teacher
+            cursor.execute("""
+                SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                       s.subject_name, s.department, s.semester
+                FROM practical_sessions ps
+                JOIN subjects s ON ps.subject_id = s.subject_code
+                WHERE ps.teacher_id = ?
+                ORDER BY ps.id DESC
+            """, (teacher_id,))
+            sessions_list = cursor.fetchall()
+        else:
+            sessions_list = []
+    else:
+        # Admin can view all sessions
+        cursor.execute("""
+            SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                   s.subject_name, s.department, s.semester, t.fullname as teacher_name
+            FROM practical_sessions ps
+            JOIN subjects s ON ps.subject_id = s.subject_code
+            JOIN teachers t ON ps.teacher_id = t.teacher_id
+            ORDER BY ps.id DESC
+        """)
+        sessions_list = cursor.fetchall()
+
+    conn.close()
+
+    return render_template(
+        "practical_sessions.html",
+        sessions=sessions_list,
+        teacher_id=teacher_id,
+        teacher_name=teacher_name,
+        assigned_subjects=assigned_subjects
+    )
+
+
+# ---------------- PRACTICAL SESSION COCKPIT ----------------
 @app.route("/practical_session/<subject_code>")
 @role_required("teacher", "admin")
 def practical_session(subject_code):
+    email = session.get("email")
+    role = session.get("role")
     conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT subject_name
-    FROM subjects
-    WHERE subject_code = ?
+        SELECT subject_code, subject_name, department, semester
+        FROM subjects
+        WHERE subject_code = ?
     """, (subject_code,))
-
     subject = cursor.fetchone()
-    conn.close()
 
     if not subject:
-        return "Subject not found", 404
+        conn.close()
+        flash(f"Subject '{subject_code}' not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = None
+    teacher_name = session.get("fullname", "Faculty Member")
+    active_session = None
+
+    if role == "teacher":
+        cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+        tch = cursor.fetchone()
+        if tch:
+            teacher_id = tch["teacher_id"]
+            teacher_name = tch["fullname"]
+            # Security check: verify subject assignment
+            cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+            if not cursor.fetchone():
+                conn.close()
+                flash(f"Unauthorized: You are not assigned to conduct practical sessions for subject '{subject_code}'.", "error")
+                return redirect(url_for("teacher"))
+
+            # Check if there is an active session for this subject
+            cursor.execute("""
+                SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                       s.subject_name, s.department, s.semester, t.fullname as teacher_name
+                FROM practical_sessions ps
+                JOIN subjects s ON ps.subject_id = s.subject_code
+                JOIN teachers t ON ps.teacher_id = t.teacher_id
+                WHERE ps.teacher_id = ? AND ps.subject_id = ? AND ps.status = 'active'
+                ORDER BY ps.id DESC LIMIT 1
+            """, (teacher_id, subject_code))
+            active_session = cursor.fetchone()
+
+    conn.close()
 
     return render_template(
         "practical_session.html",
+        subject=subject,
         subject_name=subject["subject_name"],
-        today=date.today()
+        subject_code=subject["subject_code"],
+        active_session=active_session,
+        teacher_id=teacher_id,
+        teacher_name=teacher_name,
+        today=date.today().isoformat()
     )
 
 

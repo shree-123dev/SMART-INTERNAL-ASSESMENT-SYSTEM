@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practical Sessions Log | SIAMS Faculty</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .pulse-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-right: 6px;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.6);
+            animation: pulseGlow 1.8s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+    </style>
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 1280px; margin: 30px auto; padding: 0 24px;">
+
+        <!-- Top Header Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: var(--card-bg); padding: 24px 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div>
+                    <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">Practical Session Management</h1>
+                    <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Faculty: <strong>{{ teacher_name }}</strong> (ID: {{ teacher_id or 'Faculty' }})</p>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-primary" onclick="openStartSessionModal()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-play-circle"></i> Start Practical Session
+                </button>
+                <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-arrow-left"></i> Faculty Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Alert Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div style="background: {% if category == 'error' %}#fef2f2{% elif category == 'success' %}#ecfdf5{% else %}#eff6ff{% endif %}; border: 1px solid {% if category == 'error' %}#fecaca{% elif category == 'success' %}#a7f3d0{% else %}#bfdbfe{% endif %}; color: {% if category == 'error' %}#dc2626{% elif category == 'success' %}#059669{% else %}#1d4ed8{% endif %}; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}" style="font-size: 18px;"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Filter & Summary Bar -->
+        <div style="background: var(--card-bg); padding: 18px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px;">
+                    <i class="fas fa-layer-group" style="margin-right: 6px;"></i> Total: {{ sessions|length }} Sessions
+                </span>
+            </div>
+
+            <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
+                <i class="fas fa-shield-alt" style="color: #10b981; margin-right: 4px;"></i> Strict Role Isolation Active
+            </div>
+        </div>
+
+        <!-- Sessions Data Table -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm);">
+            {% if sessions %}
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Session ID</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Code & Name</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Date</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Start Time</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">End Time</th>
+                            <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status</th>
+                            <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sessions %}
+                        <tr style="border-bottom: 1px solid var(--border); transition: var(--transition);">
+                            <td style="padding: 14px 20px;">
+                                <span style="font-weight: 700; font-family: monospace; color: var(--text-muted); background: var(--bg-main); padding: 4px 8px; border-radius: 6px; font-size: 13px;">
+                                    #{{ s['id'] }}
+                                </span>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                <div>
+                                    <span style="font-family: monospace; font-weight: 700; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px;">
+                                        {{ s['subject_id'] }}
+                                    </span>
+                                    <strong style="color: var(--text-main); font-size: 14px;">{{ s['subject_name'] }}</strong>
+                                </div>
+                            </td>
+                            <td style="padding: 14px 20px; color: var(--text-main); font-size: 14px;">
+                                <i class="fas fa-calendar-day" style="color: var(--text-light); margin-right: 6px; font-size: 12px;"></i>
+                                {{ s['session_date'] }}
+                            </td>
+                            <td style="padding: 14px 20px; color: var(--text-main); font-size: 14px;">
+                                <i class="fas fa-clock" style="color: #10b981; margin-right: 6px; font-size: 12px;"></i>
+                                {{ s['start_time'] or 'N/A' }}
+                            </td>
+                            <td style="padding: 14px 20px; color: var(--text-muted); font-size: 14px;">
+                                {% if s['end_time'] %}
+                                <i class="fas fa-flag-checkered" style="color: var(--text-light); margin-right: 6px; font-size: 12px;"></i>
+                                {{ s['end_time'] }}
+                                {% else %}
+                                <span style="color: #d97706; font-style: italic;">In Progress</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 14px 20px; text-align: center;">
+                                {% if s['status'] == 'active' %}
+                                <span class="badge badge-success" style="padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center;">
+                                    <span class="pulse-indicator"></span> Active
+                                </span>
+                                {% else %}
+                                <span class="badge badge-info" style="padding: 6px 12px; font-size: 12px;">
+                                    <i class="fas fa-check" style="margin-right: 4px;"></i> Completed
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 14px 20px; text-align: center;">
+                                {% if s['status'] == 'active' %}
+                                <form action="{{ url_for('end_session', session_id=s['id']) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="badge badge-danger" style="border: none; cursor: pointer; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #dc2626;" title="End this active session">
+                                        <i class="fas fa-stop-circle"></i> End Session
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span style="font-size: 12px; color: var(--text-muted);">
+                                    <i class="fas fa-lock" style="font-size: 11px; margin-right: 4px;"></i> Concluded
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 60px 20px;">
+                <div style="width: 70px; height: 70px; border-radius: 50%; background: var(--bg-main); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 16px;">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <h3 style="color: var(--text-main); font-size: 18px; font-weight: 700;">No Practical Sessions Found</h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 6px; max-width: 420px; margin-left: auto; margin-right: auto;">
+                    You haven't conducted any practical evaluation sessions yet. Start a session for any of your assigned subjects above.
+                </p>
+                <div style="margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" onclick="openStartSessionModal()" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-play-circle"></i> Start Practical Session
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ================= START SESSION MODAL ================= -->
+    <div id="startSessionModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 480px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); animation: fadeIn 0.2s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: var(--radius-md); background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">Start Practical Session</h3>
+                </div>
+                <button type="button" onclick="closeStartSessionModal()" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form action="{{ url_for('start_session') }}" method="POST">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
+                        Select Assigned Subject <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select name="subject_code" required class="form-control" style="width: 100%; padding: 12px 14px; font-size: 14px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
+                        <option value="">-- Choose Subject --</option>
+                        {% for subj in assigned_subjects %}
+                        <option value="{{ subj['subject_code'] }}">{{ subj['subject_code'] }} — {{ subj['subject_name'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 24px; font-size: 13px; color: var(--text-muted);">
+                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 6px;"></i>
+                    The session start time and date will be logged automatically. Multiple concurrent active sessions are disallowed.
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" class="btn btn-outline" onclick="closeStartSessionModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" style="background: #10b981; border-color: #10b981; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-play"></i> Start Session Now
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script>
+        function openStartSessionModal() {
+            document.getElementById('startSessionModal').style.display = 'flex';
+        }
+
+        function closeStartSessionModal() {
+            document.getElementById('startSessionModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('startSessionModal');
+            if (event.target === modal) {
+                closeStartSessionModal();
+            }
+        };
+    </script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Practical Evaluation Session | SIAMS</title>
+    <title>{{ subject_name }} | Practical Session Cockpit | SIAMS</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -16,48 +16,123 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .pulse-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-right: 6px;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.6);
+            animation: pulseGlow 1.8s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+    </style>
 </head>
 
 <body style="background: var(--bg-main);">
 
-    <div style="max-width: 800px; margin: 50px auto; padding: 0 24px;">
+    <div style="max-width: 860px; margin: 40px auto; padding: 0 24px;">
+
+        <!-- Back Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-arrow-left"></i> Back to Faculty Dashboard
+            </a>
+            <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-history"></i> Sessions Log
+            </a>
+        </div>
 
         <!-- Main Cockpit Card -->
-        <div style="background: white; border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-xl); padding: 40px; text-align: center;">
+        <div class="dashboard-card" style="padding: 40px; text-align: center; box-shadow: var(--shadow-xl);">
 
             <!-- Header Badge -->
-            <div style="display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; color: #059669; padding: 6px 16px; border-radius: var(--radius-full); font-size: 13px; font-weight: 700; margin-bottom: 24px;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
-                LABORATORY EVALUATION COCKPIT
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: #eef2ff; color: #4f46e5; padding: 6px 18px; border-radius: var(--radius-full); font-size: 13px; font-weight: 700; margin-bottom: 20px;">
+                <i class="fas fa-flask"></i> LABORATORY PRACTICAL EVALUATION
             </div>
 
-            <h1 style="font-size: 32px; font-weight: 800; color: var(--dark); margin-bottom: 12px; letter-spacing: -0.5px;">
+            <h1 style="font-size: 30px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; letter-spacing: -0.5px;">
                 {{ subject_name }}
             </h1>
 
-            <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 32px;">
-                Session Date: <strong style="color: var(--dark);">{{ today }}</strong>
-            </p>
-
-            <!-- Scanner Visual Placeholder Box -->
-            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 40px 20px; color: white; margin-bottom: 32px; position: relative; overflow: hidden; border: 1px solid #334155;">
-                <div style="width: 100px; height: 100px; margin: 0 auto 20px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 38px; color: #38bdf8;">
-                    <i class="fas fa-qrcode"></i>
-                </div>
-                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">QR Attendance & Evaluation Ready</h3>
-                <p style="color: #94a3b8; font-size: 14px; max-width: 480px; margin: 0 auto;">
-                    Launch camera sensor to scan student identity QR codes for instant attendance confirmation and practical mark entry.
-                </p>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 28px;">
+                <span style="font-family: monospace; font-weight: 700; color: #4f46e5; background: #eef2ff; padding: 4px 12px; border-radius: 6px; font-size: 14px;">
+                    {{ subject_code }}
+                </span>
+                <span class="badge badge-warning">Sem {{ subject['semester'] if subject else 'Active' }}</span>
+                <span class="badge badge-info">{{ subject['department'] if subject else 'Academics' }}</span>
             </div>
 
-            <!-- Action Buttons -->
-            <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
-                <button class="btn btn-success" style="padding: 14px 32px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-camera"></i> Start QR Attendance Scanner
-                </button>
-                <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="padding: 14px 28px; font-size: 16px; font-weight: 600; border-radius: var(--radius-md); display: inline-flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-arrow-left"></i> Exit Session
-                </a>
+            {% if active_session %}
+            <!-- Active Session In-Progress Card -->
+            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 32px 24px; color: white; margin-bottom: 32px; border: 1px solid #334155; text-align: left;">
+                <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; margin-bottom: 16px;">
+                    <span class="pulse-indicator"></span> SESSION IS CURRENTLY ACTIVE
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div>
+                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Faculty Instructor</span>
+                        <strong style="font-size: 15px; color: #ffffff;">{{ active_session['teacher_name'] or teacher_name }}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Session Date</span>
+                        <strong style="font-size: 15px; color: #ffffff;">{{ active_session['session_date'] }}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Start Time</span>
+                        <strong style="font-size: 15px; color: #38bdf8;">{{ active_session['start_time'] }}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Session Status</span>
+                        <strong style="font-size: 15px; color: #34d399;">Active (Open)</strong>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <form action="{{ url_for('end_session', session_id=active_session['id']) }}" method="POST" onsubmit="return confirm('Conclude and stop this practical session?');">
+                        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 12px 28px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-stop-circle"></i> Conclude & End Practical Session
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <!-- No Active Session - Ready to Start -->
+            <div style="background: var(--bg-main); border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: 36px 20px; margin-bottom: 32px;">
+                <div style="width: 70px; height: 70px; margin: 0 auto 16px; border-radius: 50%; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                    <i class="fas fa-play"></i>
+                </div>
+                <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Ready to Begin Practical Lab</h3>
+                <p style="color: var(--text-muted); font-size: 14px; max-width: 460px; margin: 0 auto 24px;">
+                    Starting this session will automatically log your faculty ID, the current date, and exact start time.
+                </p>
+
+                <form action="{{ url_for('start_session') }}" method="POST">
+                    <input type="hidden" name="subject_code" value="{{ subject_code }}">
+                    <button type="submit" class="btn btn-primary" style="background: #10b981; border-color: #10b981; padding: 14px 32px; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                        <i class="fas fa-play-circle"></i> Start Practical Session
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <div style="border-top: 1px solid var(--border); padding-top: 20px; font-size: 13px; color: var(--text-muted);">
+                <i class="fas fa-shield-alt" style="color: #10b981; margin-right: 4px;"></i> Protected by SIAMS Role-Based Practical Lifecycle Security
             </div>
 
         </div>
