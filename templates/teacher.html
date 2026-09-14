@@ -124,7 +124,7 @@
         {% endif %}
         {% endwith %}
 
-        <!-- ================= ACTIVE PRACTICAL SESSION BANNER (DAY 7) ================= -->
+        <!-- ================= ACTIVE PRACTICAL SESSION BANNER (DAY 7 & DAY 8) ================= -->
         {% if active_session %}
         <div class="active-cockpit-banner">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
@@ -133,9 +133,13 @@
                         <span class="pulse-indicator"></span> ACTIVE PRACTICAL SESSION IN PROGRESS
                     </div>
 
-                    <h2 style="font-size: 26px; font-weight: 800; margin: 0 0 8px 0; color: #ffffff;">
+                    <h2 style="font-size: 26px; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">
                         {{ active_session['subject_name'] }}
                     </h2>
+
+                    <div style="font-size: 16px; font-weight: 700; color: #38bdf8; margin-bottom: 10px;">
+                        <i class="fas fa-flask"></i> {{ active_session['experiment_no'] or 'Experiment' }}: {{ active_session['experiment_name'] or 'Practical Session' }}
+                    </div>
 
                     <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 14px; color: #94a3b8;">
                         <span><strong style="color: #ffffff;"><i class="fas fa-tag" style="color: #38bdf8;"></i> Code:</strong> {{ active_session['subject_id'] }}</span>
@@ -146,13 +150,16 @@
                 </div>
 
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <a href="{{ url_for('practical_session', subject_code=active_session['subject_id']) }}" class="btn btn-primary" style="background: #4f46e5; border-color: #4f46e5; padding: 12px 24px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);">
+                        <i class="fas fa-qrcode"></i> Open Evaluation Cockpit
+                    </a>
                     <form action="{{ url_for('end_session', session_id=active_session['id']) }}" method="POST" onsubmit="return confirm('Are you sure you want to conclude and end this practical session?');">
-                        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 12px 24px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
+                        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 12px 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
                             <i class="fas fa-stop-circle"></i> End Session Now
                         </button>
                     </form>
-                    <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="border-color: rgba(255,255,255,0.3); color: #ffffff; padding: 12px 20px;">
-                        <i class="fas fa-history"></i> Sessions Log
+                    <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="border-color: rgba(255,255,255,0.3); color: #ffffff; padding: 12px 18px;">
+                        <i class="fas fa-history"></i> Log
                     </a>
                 </div>
             </div>
@@ -186,13 +193,13 @@
             <div class="stat-card">
                 <div class="stat-info">
                     <h3>Faculty Status</h3>
-                    <div class="stat-value" style="color: #10b981; font-size: 22px;">Verified</div>
-                    <span style="font-size: 12px; color: #10b981; font-weight: 600;">
-                        {% if teacher %}{{ teacher['teacher_id'] }}{% else %}Teacher{% endif %}
-                    </span>
+                    <div class="stat-value" style="color: #10b981; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-check-circle" style="font-size: 18px;"></i> Active
+                    </div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Verified Faculty</span>
                 </div>
                 <div class="stat-icon icon-green">
-                    <i class="fas fa-id-badge"></i>
+                    <i class="fas fa-user-check"></i>
                 </div>
             </div>
 
@@ -253,22 +260,24 @@
 
                 <div style="border-top: 1px solid var(--border); padding-top: 16px;">
                     {% if active_session and active_session['subject_id'] == subject['subject_code'] %}
-                    <form action="{{ url_for('end_session', session_id=active_session['id']) }}" method="POST">
-                        <button type="submit" class="btn btn-primary" style="width: 100%; background: #dc2626; border-color: #dc2626; font-size: 13px; padding: 9px 14px; display: flex; justify-content: center; align-items: center; gap: 6px;">
-                            <span class="pulse-indicator"></span> End Active Session
-                        </button>
-                    </form>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="{{ url_for('practical_session', subject_code=subject['subject_code']) }}" class="btn btn-primary" style="flex: 1; font-size: 13px; padding: 9px 12px; display: flex; justify-content: center; align-items: center; gap: 6px; background: #4f46e5; border-color: #4f46e5;">
+                            <i class="fas fa-qrcode"></i> Cockpit
+                        </a>
+                        <form action="{{ url_for('end_session', session_id=active_session['id']) }}" method="POST" style="flex: 1;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; background: #dc2626; border-color: #dc2626; font-size: 13px; padding: 9px 12px; display: flex; justify-content: center; align-items: center; gap: 6px;">
+                                <span class="pulse-indicator"></span> End
+                            </button>
+                        </form>
+                    </div>
                     {% elif active_session %}
                     <button type="button" disabled class="btn btn-outline" style="width: 100%; opacity: 0.6; cursor: not-allowed; font-size: 13px; padding: 9px 14px; display: flex; justify-content: center; align-items: center; gap: 6px;" title="Another session is already active">
                         <i class="fas fa-lock"></i> Another Session Active
                     </button>
                     {% else %}
-                    <form action="{{ url_for('start_session') }}" method="POST">
-                        <input type="hidden" name="subject_code" value="{{ subject['subject_code'] }}">
-                        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 13px; padding: 9px 14px; display: flex; justify-content: center; align-items: center; gap: 6px; background: #10b981; border-color: #10b981;">
-                            <i class="fas fa-play-circle"></i> Start Practical Session
-                        </button>
-                    </form>
+                    <a href="{{ url_for('practical_session', subject_code=subject['subject_code']) }}" class="btn btn-primary" style="width: 100%; font-size: 13px; padding: 9px 14px; display: flex; justify-content: center; align-items: center; gap: 6px; background: #10b981; border-color: #10b981; text-decoration: none;">
+                        <i class="fas fa-play-circle"></i> Start Practical Session
+                    </a>
                     {% endif %}
                 </div>
             </div>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ subject_name }} | Practical Session Cockpit | SIAMS</title>
+    <title>{{ subject_name }} | Practical Evaluation Cockpit | SIAMS</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -16,6 +16,9 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- HTML5-QRCode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         .pulse-indicator {
@@ -40,105 +43,619 @@
                 box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
             }
         }
+
+        .cockpit-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid #334155;
+            border-radius: var(--radius-xl);
+            padding: 30px;
+            color: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+            margin-bottom: 24px;
+        }
+
+        .scanner-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+        }
+
+        .evaluation-card {
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 24px;
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .marks-input-box {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 16px;
+        }
+
+        .marks-field-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .marks-field-group label {
+            width: 220px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .marks-field-group input {
+            width: 120px;
+            padding: 10px 14px;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+
+        .marks-field-group .max-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
     </style>
 </head>
 
 <body style="background: var(--bg-main);">
 
-    <div style="max-width: 860px; margin: 40px auto; padding: 0 24px;">
+    <div style="max-width: 1200px; margin: 30px auto; padding: 0 24px;">
 
-        <!-- Back Navigation -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
-                <i class="fas fa-arrow-left"></i> Back to Faculty Dashboard
-            </a>
-            <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
-                <i class="fas fa-history"></i> Sessions Log
-            </a>
+        <!-- Top Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-arrow-left"></i> Faculty Dashboard
+                </a>
+                <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-history"></i> Sessions Log
+                </a>
+            </div>
+            <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" type="button">
+                <i class="fas fa-moon"></i>
+            </button>
         </div>
 
-        <!-- Main Cockpit Card -->
-        <div class="dashboard-card" style="padding: 40px; text-align: center; box-shadow: var(--shadow-xl);">
-
-            <!-- Header Badge -->
-            <div style="display: inline-flex; align-items: center; gap: 8px; background: #eef2ff; color: #4f46e5; padding: 6px 18px; border-radius: var(--radius-full); font-size: 13px; font-weight: 700; margin-bottom: 20px;">
-                <i class="fas fa-flask"></i> LABORATORY PRACTICAL EVALUATION
+        <!-- Alert Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div style="background: {% if category == 'error' %}#fef2f2{% elif category == 'success' %}#ecfdf5{% else %}#eff6ff{% endif %}; border: 1px solid {% if category == 'error' %}#fecaca{% elif category == 'success' %}#a7f3d0{% else %}#bfdbfe{% endif %}; color: {% if category == 'error' %}#dc2626{% elif category == 'success' %}#059669{% else %}#1d4ed8{% endif %}; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}" style="font-size: 18px;"></i>
+                <span>{{ message }}</span>
             </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-            <h1 style="font-size: 30px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; letter-spacing: -0.5px;">
-                {{ subject_name }}
-            </h1>
+        <!-- Dynamic Message Alert Box for AJAX -->
+        <div id="ajaxAlertBox" style="display: none; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 24px; font-weight: 600;">
+            <i id="ajaxAlertIcon" class="fas fa-info-circle" style="font-size: 18px; margin-right: 8px;"></i>
+            <span id="ajaxAlertMessage"></span>
+        </div>
 
-            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 28px;">
-                <span style="font-family: monospace; font-weight: 700; color: #4f46e5; background: #eef2ff; padding: 4px 12px; border-radius: 6px; font-size: 14px;">
-                    {{ subject_code }}
-                </span>
-                <span class="badge badge-warning">Sem {{ subject['semester'] if subject else 'Active' }}</span>
-                <span class="badge badge-info">{{ subject['department'] if subject else 'Academics' }}</span>
-            </div>
-
-            {% if active_session %}
-            <!-- Active Session In-Progress Card -->
-            <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: var(--radius-lg); padding: 32px 24px; color: white; margin-bottom: 32px; border: 1px solid #334155; text-align: left;">
-                <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; margin-bottom: 16px;">
-                    <span class="pulse-indicator"></span> SESSION IS CURRENTLY ACTIVE
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                    <div>
-                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Faculty Instructor</span>
-                        <strong style="font-size: 15px; color: #ffffff;">{{ active_session['teacher_name'] or teacher_name }}</strong>
+        {% if active_session %}
+        <!-- ================= ACTIVE SESSION COCKPIT ================= -->
+        <div class="cockpit-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 4px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700; margin-bottom: 12px;">
+                        <span class="pulse-indicator"></span> ACTIVE PRACTICAL EVALUATION SESSION
                     </div>
-                    <div>
-                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Session Date</span>
-                        <strong style="font-size: 15px; color: #ffffff;">{{ active_session['session_date'] }}</strong>
+
+                    <h1 style="font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #ffffff;">
+                        {{ active_session['subject_name'] }}
+                    </h1>
+
+                    <div style="font-size: 18px; font-weight: 700; color: #38bdf8; margin-bottom: 12px;">
+                        <i class="fas fa-flask"></i> {{ active_session['experiment_no'] or 'Experiment' }}: {{ active_session['experiment_name'] or 'Practical Lab Evaluation' }}
                     </div>
-                    <div>
-                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Start Time</span>
-                        <strong style="font-size: 15px; color: #38bdf8;">{{ active_session['start_time'] }}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size: 11px; text-transform: uppercase; color: #94a3b8; display: block; font-weight: 700;">Session Status</span>
-                        <strong style="font-size: 15px; color: #34d399;">Active (Open)</strong>
+
+                    <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 13px; color: #94a3b8;">
+                        <span><strong style="color: #ffffff;"><i class="fas fa-tag"></i> Code:</strong> {{ active_session['subject_id'] }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-user-tie"></i> Instructor:</strong> {{ active_session['teacher_name'] or teacher_name }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-calendar-day"></i> Date:</strong> {{ active_session['session_date'] }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-clock"></i> Start Time:</strong> {{ active_session['start_time'] }}</span>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 12px;">
-                    <form action="{{ url_for('end_session', session_id=active_session['id']) }}" method="POST" onsubmit="return confirm('Conclude and stop this practical session?');">
-                        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 12px 28px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-stop-circle"></i> Conclude & End Practical Session
+                <div>
+                    <form action="{{ url_for('end_session', session_id=active_session['id']) }}" method="POST" onsubmit="return confirm('Conclude and end this practical evaluation session?');">
+                        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626; padding: 12px 24px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-stop-circle"></i> End Practical Session
                         </button>
                     </form>
                 </div>
             </div>
-            {% else %}
-            <!-- No Active Session - Ready to Start -->
-            <div style="background: var(--bg-main); border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: 36px 20px; margin-bottom: 32px;">
-                <div style="width: 70px; height: 70px; margin: 0 auto 16px; border-radius: 50%; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 28px;">
-                    <i class="fas fa-play"></i>
+        </div>
+
+        <!-- ================= SCANNER & EVALUATION SECTION ================= -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;" id="cockpitGrid">
+            
+            <!-- Left Column: QR Scanner -->
+            <div class="scanner-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                        <i class="fas fa-qrcode" style="color: var(--primary); margin-right: 6px;"></i> Scan Student QR
+                    </h3>
+                    <span class="badge badge-success">Scan Ready</span>
                 </div>
-                <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Ready to Begin Practical Lab</h3>
-                <p style="color: var(--text-muted); font-size: 14px; max-width: 460px; margin: 0 auto 24px;">
-                    Starting this session will automatically log your faculty ID, the current date, and exact start time.
-                </p>
 
-                <form action="{{ url_for('start_session') }}" method="POST">
-                    <input type="hidden" name="subject_code" value="{{ subject_code }}">
-                    <button type="submit" class="btn btn-primary" style="background: #10b981; border-color: #10b981; padding: 14px 32px; font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
-                        <i class="fas fa-play-circle"></i> Start Practical Session
-                    </button>
-                </form>
+                <!-- Camera QR Reader Container -->
+                <div id="qrReaderWrapper" style="border: 2px dashed rgba(79, 70, 229, 0.3); border-radius: var(--radius-lg); padding: 12px; text-align: center; margin-bottom: 16px; background: var(--bg-main);">
+                    <div id="qr-reader" style="width: 100%; min-height: 180px;"></div>
+                    <div style="margin-top: 10px;">
+                        <button type="button" id="btnToggleCamera" class="btn btn-outline" style="font-size: 13px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;" onclick="toggleCameraScanner()">
+                            <i class="fas fa-camera"></i> <span id="cameraBtnText">Start Camera Scanner</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Direct USN Scanner Input (Handheld QR Gun / Manual USN Input) -->
+                <div style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        <i class="fas fa-barcode"></i> Direct QR / USN Input:
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input
+                            type="text"
+                            id="manualUSNInput"
+                            placeholder="Enter / scan student USN (e.g. CS2026A)..."
+                            class="form-control"
+                            style="flex: 1; padding: 10px 14px; font-size: 14px; text-transform: uppercase;"
+                            onkeypress="if(event.key === 'Enter') handleManualScan();">
+                        <button type="button" class="btn btn-primary" onclick="handleManualScan()" style="padding: 10px 18px; font-weight: 700;">
+                            <i class="fas fa-search"></i> Identify
+                        </button>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 0 0;">
+                        Auto-detects QR codes from camera or handheld hardware scanners.
+                    </p>
+                </div>
             </div>
-            {% endif %}
 
-            <div style="border-top: 1px solid var(--border); padding-top: 20px; font-size: 13px; color: var(--text-muted);">
-                <i class="fas fa-shield-alt" style="color: #10b981; margin-right: 4px;"></i> Protected by SIAMS Role-Based Practical Lifecycle Security
+            <!-- Right Column: Student Evaluation Card -->
+            <div id="studentEvalCard" class="evaluation-card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="evalStudentAvatar" style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800;">
+                            S
+                        </div>
+                        <div>
+                            <h3 id="evalStudentName" style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;"></h3>
+                            <span id="evalStudentUSN" style="font-family: monospace; font-weight: 700; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <span id="evalAttendanceBadge" class="badge badge-success" style="font-size: 13px; padding: 6px 14px;">
+                            <i class="fas fa-check-circle"></i> PRESENT ✓
+                        </span>
+                    </div>
+                </div>
+
+                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; gap: 16px;">
+                    <span><strong>Dept:</strong> <span id="evalStudentDept"></span></span>
+                    <span><strong>Sem:</strong> Sem <span id="evalStudentSem"></span></span>
+                    <span><strong>Sec:</strong> Sec <span id="evalStudentSec"></span></span>
+                </div>
+
+                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: var(--radius-md); padding: 12px; font-size: 13px; color: #3730a3; margin-bottom: 16px;">
+                    <strong><i class="fas fa-flask"></i> Evaluation Task:</strong>
+                    <div id="evalExperimentTitle" style="font-weight: 700; margin-top: 2px;"></div>
+                </div>
+
+                <!-- Marks Form -->
+                <form id="marksForm" onsubmit="event.preventDefault(); saveStudentMarks();">
+                    <input type="hidden" id="evalSessionId" value="{{ active_session['id'] }}">
+                    <input type="hidden" id="evalTargetUSN" value="">
+
+                    <div class="marks-input-box">
+                        <div class="marks-field-group">
+                            <label for="practicalMarksInput">
+                                <i class="fas fa-vial" style="color: #4f46e5; margin-right: 6px;"></i> Practical Experiment Marks:
+                            </label>
+                            <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="10"
+                                id="practicalMarksInput"
+                                required
+                                value="0">
+                            <span class="max-label">/ 10</span>
+                        </div>
+
+                        <div class="marks-field-group" style="margin-bottom: 0;">
+                            <label for="assignmentMarksInput">
+                                <i class="fas fa-file-signature" style="color: #0284c7; margin-right: 6px;"></i> Assignment Marks:
+                            </label>
+                            <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="5"
+                                id="assignmentMarksInput"
+                                required
+                                value="0">
+                            <span class="max-label">/ 5</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
+                        <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-save"></i> Save Attendance & Marks
+                        </button>
+                    </div>
+                </form>
             </div>
 
         </div>
 
+        <!-- ================= SESSION ATTENDANCE & EVALUATION ROSTER ================= -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 30px;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                        <i class="fas fa-clipboard-list" style="color: var(--primary); margin-right: 6px;"></i> Session Evaluated Student Roster
+                    </h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">Students marked present and graded during this active lab session</p>
+                </div>
+                <span class="badge badge-primary" id="rosterCountBadge" style="font-size: 13px; padding: 6px 14px;">
+                    Evaluated: {{ evaluated_students|length if evaluated_students else 0 }} Students
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="sessionRosterTable" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">USN</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Full Name</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Department</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Attendance</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical (/10)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/5)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rosterTableBody">
+                        {% if evaluated_students %}
+                            {% for st in evaluated_students %}
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 12px 20px;">
+                                    <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                                        {{ st['usn'] }}
+                                    </span>
+                                </td>
+                                <td style="padding: 12px 20px; font-weight: 600; color: var(--text-main);">
+                                    {{ st['fullname'] }}
+                                </td>
+                                <td style="padding: 12px 20px; font-size: 13px; color: var(--text-muted);">
+                                    {{ st['department'] }} (Sec {{ st['section'] }})
+                                </td>
+                                <td style="padding: 12px 20px; text-align: center;">
+                                    <span class="badge badge-success" style="font-size: 12px;">Present ✓</span>
+                                </td>
+                                <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #4f46e5;">
+                                    {{ st['practical_marks'] if st['practical_marks'] is not none else '—' }} / 10
+                                </td>
+                                <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #0284c7;">
+                                    {{ st['assignment_marks'] if st['assignment_marks'] is not none else '—' }} / 5
+                                </td>
+                                <td style="padding: 12px 20px; text-align: center; font-weight: 800; color: var(--text-main);">
+                                    {% if st['practical_marks'] is not none and st['assignment_marks'] is not none %}
+                                        {{ st['practical_marks'] + st['assignment_marks'] }} / 15
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr id="emptyRosterRow">
+                                <td colspan="7" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
+                                    <i class="fas fa-user-clock" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+                                    No students scanned yet in this active session. Scan student QR codes above to record attendance and enter evaluation marks.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- ================= START PRACTICAL SESSION FORM ================= -->
+        <div class="dashboard-card" style="padding: 40px; text-align: center; max-width: 700px; margin: 0 auto; box-shadow: var(--shadow-xl);">
+            <div style="width: 70px; height: 70px; margin: 0 auto 16px; border-radius: 50%; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                <i class="fas fa-flask"></i>
+            </div>
+
+            <h1 style="font-size: 26px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">
+                Begin Practical Evaluation Session
+            </h1>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 28px;">
+                Configure the practical laboratory experiment to activate the contactless QR attendance scanner.
+            </p>
+
+            <form action="{{ url_for('start_session') }}" method="POST" style="text-align: left;">
+                <input type="hidden" name="subject_code" value="{{ subject_code }}">
+
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Curriculum Subject Course
+                    </label>
+                    <div style="padding: 12px 16px; background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); font-weight: 700; color: var(--text-main); display: flex; justify-content: space-between; align-items: center;">
+                        <span>{{ subject_code }} — {{ subject_name }}</span>
+                        <span class="badge badge-info">{{ subject['department'] if subject else 'CSE' }}</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Experiment Number / Identifier <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="experiment_no"
+                        required
+                        placeholder="e.g. Experiment 3"
+                        class="form-control"
+                        style="width: 100%; padding: 12px 14px; font-size: 14px;">
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Experiment Name / Topic Description <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="experiment_name"
+                        required
+                        placeholder="e.g. Implementation of Stack using Array & Operations"
+                        class="form-control"
+                        style="width: 100%; padding: 12px 14px; font-size: 14px;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <a href="{{ url_for('teacher') }}" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary" style="background: #10b981; border-color: #10b981; padding: 12px 28px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-play-circle"></i> Launch Active Session
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
     </div>
 
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script>
+        let html5QrScanner = null;
+        let isCameraActive = false;
+
+        function showAjaxAlert(type, message) {
+            const box = document.getElementById('ajaxAlertBox');
+            const icon = document.getElementById('ajaxAlertIcon');
+            const msg = document.getElementById('ajaxAlertMessage');
+            if (!box) return;
+
+            box.style.display = 'flex';
+            box.style.alignItems = 'center';
+            msg.innerText = message;
+
+            if (type === 'success') {
+                box.style.background = '#ecfdf5';
+                box.style.border = '1px solid #a7f3d0';
+                box.style.color = '#059669';
+                icon.className = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                box.style.background = '#fef2f2';
+                box.style.border = '1px solid #fecaca';
+                box.style.color = '#dc2626';
+                icon.className = 'fas fa-exclamation-circle';
+            } else {
+                box.style.background = '#eff6ff';
+                box.style.border = '1px solid #bfdbfe';
+                box.style.color = '#1d4ed8';
+                icon.className = 'fas fa-info-circle';
+            }
+        }
+
+        // QR Scan Handler
+        async function processStudentScan(usn) {
+            const sessionId = document.getElementById('evalSessionId')?.value;
+            if (!sessionId || !usn) return;
+
+            try {
+                const response = await fetch('/scan_student_qr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, usn: usn })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    showAjaxAlert('error', result.error || 'Failed to identify student QR.');
+                    return;
+                }
+
+                // Show student evaluation card
+                const evalCard = document.getElementById('studentEvalCard');
+                if (evalCard) {
+                    evalCard.style.display = 'block';
+                    document.getElementById('evalStudentName').innerText = result.student.fullname;
+                    document.getElementById('evalStudentUSN').innerText = result.student.usn;
+                    document.getElementById('evalTargetUSN').value = result.student.usn;
+                    document.getElementById('evalStudentAvatar').innerText = result.student.fullname[0].toUpperCase();
+                    document.getElementById('evalStudentDept').innerText = result.student.department;
+                    document.getElementById('evalStudentSem').innerText = result.student.semester;
+                    document.getElementById('evalStudentSec').innerText = result.student.section;
+                    document.getElementById('evalExperimentTitle').innerText = `${result.session.experiment_no}: ${result.session.experiment_name}`;
+
+                    document.getElementById('practicalMarksInput').value = result.practical_marks || 0;
+                    document.getElementById('assignmentMarksInput').value = result.assignment_marks || 0;
+
+                    showAjaxAlert('success', `${result.student.fullname} (${result.student.usn}) identified. ${result.attendance_message}`);
+                    
+                    // Focus practical marks input
+                    document.getElementById('practicalMarksInput').focus();
+                }
+
+            } catch (err) {
+                showAjaxAlert('error', 'Network or server error while scanning QR.');
+            }
+        }
+
+        // Manual scan triggered
+        function handleManualScan() {
+            const input = document.getElementById('manualUSNInput');
+            const val = input.value.trim();
+            if (val) {
+                processStudentScan(val);
+                input.value = '';
+            }
+        }
+
+        // Save Marks Handler
+        async function saveStudentMarks() {
+            const sessionId = document.getElementById('evalSessionId')?.value;
+            const studentId = document.getElementById('evalTargetUSN')?.value;
+            const practicalMarks = document.getElementById('practicalMarksInput')?.value;
+            const assignmentMarks = document.getElementById('assignmentMarksInput')?.value;
+
+            if (!sessionId || !studentId) {
+                showAjaxAlert('error', 'No active student selected for evaluation.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/save_session_marks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        student_id: studentId,
+                        practical_marks: practicalMarks,
+                        assignment_marks: assignmentMarks
+                    })
+                });
+
+                const res = await response.json();
+
+                if (!res.success) {
+                    showAjaxAlert('error', res.error || 'Failed to save marks.');
+                    return;
+                }
+
+                showAjaxAlert('success', res.message || 'Attendance and marks saved successfully!');
+
+                // Update roster list table
+                updateRosterTable(res.usn, res.student_name, parseFloat(practicalMarks), parseFloat(assignmentMarks));
+
+                // Clear evaluation card
+                document.getElementById('studentEvalCard').style.display = 'none';
+
+            } catch (err) {
+                showAjaxAlert('error', 'Error saving marks. Please try again.');
+            }
+        }
+
+        // Live Roster Table Update
+        function updateRosterTable(usn, name, pracMarks, assignMarks) {
+            const emptyRow = document.getElementById('emptyRosterRow');
+            if (emptyRow) emptyRow.remove();
+
+            const tbody = document.getElementById('rosterTableBody');
+            const totalScore = (pracMarks + assignMarks).toFixed(1);
+
+            // Check if row already exists
+            const existingRows = tbody.querySelectorAll('tr');
+            let updated = false;
+
+            existingRows.forEach(row => {
+                if (row.innerText.includes(usn)) {
+                    row.children[4].innerText = `${pracMarks} / 10`;
+                    row.children[5].innerText = `${assignMarks} / 5`;
+                    row.children[6].innerText = `${totalScore} / 15`;
+                    updated = true;
+                }
+            });
+
+            if (!updated) {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border)';
+                tr.innerHTML = `
+                    <td style="padding: 12px 20px;">
+                        <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                            ${usn}
+                        </span>
+                    </td>
+                    <td style="padding: 12px 20px; font-weight: 600; color: var(--text-main);">${name}</td>
+                    <td style="padding: 12px 20px; font-size: 13px; color: var(--text-muted);">Enrolled Student</td>
+                    <td style="padding: 12px 20px; text-align: center;">
+                        <span class="badge badge-success" style="font-size: 12px;">Present ✓</span>
+                    </td>
+                    <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #4f46e5;">${pracMarks} / 10</td>
+                    <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #0284c7;">${assignMarks} / 5</td>
+                    <td style="padding: 12px 20px; text-align: center; font-weight: 800; color: var(--text-main);">${totalScore} / 15</td>
+                `;
+                tbody.prepend(tr);
+            }
+        }
+
+        // Camera Toggle Handler
+        function toggleCameraScanner() {
+            const btnText = document.getElementById('cameraBtnText');
+            if (isCameraActive) {
+                if (html5QrScanner) {
+                    html5QrScanner.stop().then(() => {
+                        isCameraActive = false;
+                        btnText.innerText = 'Start Camera Scanner';
+                    }).catch(err => console.error(err));
+                }
+            } else {
+                if (!html5QrScanner) {
+                    html5QrScanner = new Html5Qrcode("qr-reader");
+                }
+                html5QrScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 200 },
+                    (decodedText) => {
+                        processStudentScan(decodedText);
+                    },
+                    (errorMessage) => {
+                        // scanning in progress
+                    }
+                ).then(() => {
+                    isCameraActive = true;
+                    btnText.innerText = 'Stop Camera Scanner';
+                }).catch(err => {
+                    console.warn("Camera could not be started:", err);
+                    showAjaxAlert('info', 'Webcam not available or permission denied. You can use the direct USN input below.');
+                });
+            }
+        }
+    </script>
 </body>
 </html>

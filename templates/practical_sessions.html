@@ -60,12 +60,18 @@
             </div>
 
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                {% if session.get('role') == 'teacher' %}
                 <button type="button" class="btn btn-primary" onclick="openStartSessionModal()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
                     <i class="fas fa-play-circle"></i> Start Practical Session
                 </button>
                 <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
                     <i class="fas fa-arrow-left"></i> Faculty Dashboard
                 </a>
+                {% else %}
+                <a href="{{ url_for('admin') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-arrow-left"></i> Admin Hub
+                </a>
+                {% endif %}
             </div>
         </div>
 
@@ -90,7 +96,7 @@
             </div>
 
             <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
-                <i class="fas fa-shield-alt" style="color: #10b981; margin-right: 4px;"></i> Strict Role Isolation Active
+                <i class="fas fa-shield-alt" style="color: #10b981; margin-right: 4px;"></i> QR Attendance & Marks Logging Enabled
             </div>
         </div>
 
@@ -103,9 +109,9 @@
                         <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Session ID</th>
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Code & Name</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Experiment Topic</th>
                             <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Date</th>
-                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Start Time</th>
-                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">End Time</th>
+                            <th style="padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Start / End Time</th>
                             <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status</th>
                             <th style="padding: 16px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Actions</th>
                         </tr>
@@ -124,23 +130,33 @@
                                         {{ s['subject_id'] }}
                                     </span>
                                     <strong style="color: var(--text-main); font-size: 14px;">{{ s['subject_name'] }}</strong>
+                                    {% if s['teacher_name'] %}
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                                        <i class="fas fa-user-tie" style="font-size: 11px; margin-right: 2px;"></i> {{ s['teacher_name'] }}
+                                    </div>
+                                    {% endif %}
                                 </div>
+                            </td>
+                            <td style="padding: 14px 20px;">
+                                {% if s['experiment_no'] or s['experiment_name'] %}
+                                <div>
+                                    <span class="badge badge-info" style="font-size: 11px; margin-bottom: 2px; display: inline-block;">{{ s['experiment_no'] or 'Lab Exp' }}</span>
+                                    <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">{{ s['experiment_name'] or 'Practical Session' }}</div>
+                                </div>
+                                {% else %}
+                                <span style="color: var(--text-muted); font-size: 13px;">General Evaluation</span>
+                                {% endif %}
                             </td>
                             <td style="padding: 14px 20px; color: var(--text-main); font-size: 14px;">
                                 <i class="fas fa-calendar-day" style="color: var(--text-light); margin-right: 6px; font-size: 12px;"></i>
                                 {{ s['session_date'] }}
                             </td>
-                            <td style="padding: 14px 20px; color: var(--text-main); font-size: 14px;">
-                                <i class="fas fa-clock" style="color: #10b981; margin-right: 6px; font-size: 12px;"></i>
-                                {{ s['start_time'] or 'N/A' }}
-                            </td>
-                            <td style="padding: 14px 20px; color: var(--text-muted); font-size: 14px;">
-                                {% if s['end_time'] %}
-                                <i class="fas fa-flag-checkered" style="color: var(--text-light); margin-right: 6px; font-size: 12px;"></i>
-                                {{ s['end_time'] }}
-                                {% else %}
-                                <span style="color: #d97706; font-style: italic;">In Progress</span>
-                                {% endif %}
+                            <td style="padding: 14px 20px; color: var(--text-main); font-size: 13px;">
+                                <div><i class="fas fa-play" style="color: #10b981; font-size: 10px; margin-right: 4px;"></i> {{ s['start_time'] or 'N/A' }}</div>
+                                <div style="color: var(--text-muted); margin-top: 2px;">
+                                    <i class="fas fa-flag-checkered" style="color: var(--text-light); font-size: 10px; margin-right: 4px;"></i> 
+                                    {{ s['end_time'] if s['end_time'] else 'In Progress' }}
+                                </div>
                             </td>
                             <td style="padding: 14px 20px; text-align: center;">
                                 {% if s['status'] == 'active' %}
@@ -155,11 +171,16 @@
                             </td>
                             <td style="padding: 14px 20px; text-align: center;">
                                 {% if s['status'] == 'active' %}
-                                <form action="{{ url_for('end_session', session_id=s['id']) }}" method="POST" style="display: inline;">
-                                    <button type="submit" class="badge badge-danger" style="border: none; cursor: pointer; padding: 6px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #dc2626;" title="End this active session">
-                                        <i class="fas fa-stop-circle"></i> End Session
-                                    </button>
-                                </form>
+                                <div style="display: inline-flex; align-items: center; gap: 8px;">
+                                    <a href="{{ url_for('practical_session', subject_code=s['subject_id']) }}" class="badge badge-primary" style="text-decoration: none; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fas fa-qrcode"></i> Cockpit
+                                    </a>
+                                    <form action="{{ url_for('end_session', session_id=s['id']) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="badge badge-danger" style="border: none; cursor: pointer; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; background: #fee2e2; color: #dc2626;" title="End session">
+                                            <i class="fas fa-stop-circle"></i> End
+                                        </button>
+                                    </form>
+                                </div>
                                 {% else %}
                                 <span style="font-size: 12px; color: var(--text-muted);">
                                     <i class="fas fa-lock" style="font-size: 11px; margin-right: 4px;"></i> Concluded
@@ -193,7 +214,7 @@
 
     <!-- ================= START SESSION MODAL ================= -->
     <div id="startSessionModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 480px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); animation: fadeIn 0.2s ease;">
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); max-width: 500px; width: 100%; padding: 28px; box-shadow: var(--shadow-xl); animation: fadeIn 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div style="width: 38px; height: 38px; border-radius: var(--radius-md); background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 18px;">
@@ -207,8 +228,8 @@
             </div>
 
             <form action="{{ url_for('start_session') }}" method="POST">
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
                         Select Assigned Subject <span style="color: #dc2626;">*</span>
                     </label>
                     <select name="subject_code" required class="form-control" style="width: 100%; padding: 12px 14px; font-size: 14px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);">
@@ -219,9 +240,35 @@
                     </select>
                 </div>
 
-                <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 24px; font-size: 13px; color: var(--text-muted);">
-                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 6px;"></i>
-                    The session start time and date will be logged automatically. Multiple concurrent active sessions are disallowed.
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Experiment Number / Identifier <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="experiment_no"
+                        required
+                        placeholder="e.g. Experiment 3"
+                        class="form-control"
+                        style="width: 100%; padding: 12px 14px; font-size: 14px;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Experiment Name / Topic <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="experiment_name"
+                        required
+                        placeholder="e.g. Implement Stack using Array"
+                        class="form-control"
+                        style="width: 100%; padding: 12px 14px; font-size: 14px;">
+                </div>
+
+                <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 22px; font-size: 12px; color: var(--text-muted);">
+                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 4px;"></i>
+                    Session start time, faculty ID, and date are logged automatically. Multiple concurrent sessions are prevented.
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 12px;">

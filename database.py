@@ -117,12 +117,22 @@ def init_db():
         start_time TEXT,
         end_time TEXT,
         status TEXT DEFAULT 'active' CHECK(status IN ('active', 'completed')),
+        experiment_no TEXT,
+        experiment_name TEXT,
         FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id) ON DELETE CASCADE,
         FOREIGN KEY (subject_id) REFERENCES subjects(subject_code) ON DELETE CASCADE
     );
     """)
 
-    # 7. ATTENDANCE TABLE (Used later by QR attendance)
+    # Seamless migration for existing practical_sessions table if columns missing
+    cursor.execute("PRAGMA table_info(practical_sessions);")
+    ps_columns = [row[1] for row in cursor.fetchall()]
+    if "experiment_no" not in ps_columns:
+        cursor.execute("ALTER TABLE practical_sessions ADD COLUMN experiment_no TEXT;")
+    if "experiment_name" not in ps_columns:
+        cursor.execute("ALTER TABLE practical_sessions ADD COLUMN experiment_name TEXT;")
+
+    # 7. ATTENDANCE TABLE (Used by QR attendance)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS attendance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,7 +149,29 @@ def init_db():
     );
     """)
 
-    # 8. INTERNAL_MARKS TABLE
+    # 8. EXPERIMENT_MARKS TABLE (Day 8: Granular Practical & Assignment Marks per Session/Experiment)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS experiment_marks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        subject_id TEXT NOT NULL,
+        teacher_id TEXT NOT NULL,
+        experiment_no TEXT,
+        experiment_name TEXT,
+        practical_marks REAL DEFAULT 0,
+        assignment_marks REAL DEFAULT 0,
+        max_practical_marks REAL DEFAULT 10,
+        max_assignment_marks REAL DEFAULT 5,
+        recorded_date TEXT NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES practical_sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES students(usn) ON DELETE CASCADE,
+        FOREIGN KEY (subject_id) REFERENCES subjects(subject_code) ON DELETE CASCADE,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id) ON DELETE CASCADE
+    );
+    """)
+
+    # 9. INTERNAL_MARKS TABLE (Cumulative Course Summary)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS internal_marks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,4 +197,4 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
-    print("SIAMS Database initialized successfully with all 8 tables and hashed accounts!")
+    print("SIAMS Database initialized successfully with all tables, experiment tracking, and hashed accounts!")

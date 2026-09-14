@@ -46,6 +46,9 @@
             <li>
                 <a href="{{ url_for('assign_subject') }}"><i class="fas fa-tasks"></i> Assign Subject</a>
             </li>
+            <li>
+                <a href="{{ url_for('practical_sessions_history') }}"><i class="fas fa-flask"></i> Practical Sessions</a>
+            </li>
         </ul>
 
         <div class="sidebar-footer">
@@ -196,6 +199,17 @@
                 <div class="action-tile-text">
                     <h4>Add Student</h4>
                     <p>Enroll a new student into the department</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('practical_sessions_history') }}" class="action-tile">
+                <div class="action-tile-icon icon-purple" style="background: #f5f3ff;">
+                    <i class="fas fa-flask" style="color: #7c3aed;"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Practical Sessions Log</h4>
+                    <p>Monitor laboratory sessions & evaluations across all teachers</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>

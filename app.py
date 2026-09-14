@@ -4,7 +4,7 @@ import qrcode
 import json
 from datetime import date, datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, session, url_for, flash
+from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from database import init_db, get_db_connection
@@ -195,7 +195,8 @@ def student():
 
     student_data = cursor.fetchone()
 
-    # Automatically ensure QR code exists for this student
+    experiment_evaluations = []
+    # Automatically ensure QR code exists for this student & fetch live marks
     if student_data:
         usn = student_data["usn"]
         qr_file = ensure_student_qr(usn, student_data["fullname"], student_data["department"], student_data["semester"])
@@ -209,11 +210,25 @@ def student():
             """, (email,))
             student_data = cursor.fetchone()
 
+        # Live fetch practical experiment evaluations & marks recorded by teachers
+        cursor.execute("""
+            SELECT em.experiment_no, em.experiment_name, em.practical_marks, em.assignment_marks,
+                   em.max_practical_marks, em.max_assignment_marks, em.recorded_date,
+                   s.subject_name, s.subject_code, t.fullname as teacher_name
+            FROM experiment_marks em
+            JOIN subjects s ON em.subject_id = s.subject_code
+            JOIN teachers t ON em.teacher_id = t.teacher_id
+            WHERE em.student_id = ?
+            ORDER BY em.id DESC
+        """, (usn,))
+        experiment_evaluations = cursor.fetchall()
+
     conn.close()
 
     return render_template(
         "student.html",
         student=student_data,
+        evaluations=experiment_evaluations,
         fullname=session.get("fullname", (student_data["fullname"] if student_data else "Student"))
     )
 
@@ -288,9 +303,10 @@ def teacher():
         """, (teacher_id,))
         assigned_subjects = cursor.fetchall()
 
-        # Query currently active session for this teacher (Day 7)
+        # Query currently active session for this teacher (Day 7/8)
         cursor.execute("""
             SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                   ps.experiment_no, ps.experiment_name,
                    s.subject_name, s.department, s.semester, t.fullname as teacher_name
             FROM practical_sessions ps
             JOIN subjects s ON ps.subject_id = s.subject_code
@@ -1289,7 +1305,7 @@ def teacher_subjects(teacher_id=None):
 
 
 # ====================================================
-# PRACTICAL SESSION MANAGEMENT MODULE (DAY 7)
+# PRACTICAL SESSION MANAGEMENT MODULE (DAY 7 & DAY 8)
 # ====================================================
 
 # ---------------- START PRACTICAL SESSION ----------------
@@ -1301,6 +1317,9 @@ def start_session(subject_code=None):
         subject_code = request.form.get("subject_code", "").strip().upper()
     else:
         subject_code = subject_code.strip().upper()
+
+    experiment_no = request.form.get("experiment_no", "").strip() or "Experiment 1"
+    experiment_name = request.form.get("experiment_name", "").strip() or "Practical Lab Evaluation"
 
     if not subject_code:
         flash("Please select an assigned subject to start a practical session.", "error")
@@ -1340,19 +1359,19 @@ def start_session(subject_code=None):
         flash(f"You already have an active practical session in progress for '{active['subject_name']}' ({active['subject_id']}). Please conclude it before beginning a new session.", "error")
         return redirect(url_for("teacher"))
 
-    # Create new practical session
+    # Create new practical session with experiment details (Day 8)
     session_date = date.today().isoformat()
     start_time = datetime.now().strftime("%I:%M %p")
 
     try:
         cursor.execute("""
-            INSERT INTO practical_sessions (teacher_id, subject_id, session_date, start_time, status)
-            VALUES (?, ?, ?, ?, 'active')
-        """, (teacher_id, subject_code, session_date, start_time))
+            INSERT INTO practical_sessions (teacher_id, subject_id, session_date, start_time, status, experiment_no, experiment_name)
+            VALUES (?, ?, ?, ?, 'active', ?, ?)
+        """, (teacher_id, subject_code, session_date, start_time, experiment_no, experiment_name))
         conn.commit()
         conn.close()
-        flash(f"Practical session for '{subject_code}' initiated successfully at {start_time}!", "success")
-        return redirect(url_for("teacher"))
+        flash(f"Practical session for '{subject_code}' ({experiment_no}) initiated successfully at {start_time}!", "success")
+        return redirect(url_for("practical_session", subject_code=subject_code))
     except Exception as e:
         conn.close()
         flash(f"Database error while starting practical session: {str(e)}", "error")
@@ -1452,6 +1471,7 @@ def practical_sessions_history():
             # Sessions strictly for this teacher
             cursor.execute("""
                 SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                       ps.experiment_no, ps.experiment_name,
                        s.subject_name, s.department, s.semester
                 FROM practical_sessions ps
                 JOIN subjects s ON ps.subject_id = s.subject_code
@@ -1465,6 +1485,7 @@ def practical_sessions_history():
         # Admin can view all sessions
         cursor.execute("""
             SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                   ps.experiment_no, ps.experiment_name,
                    s.subject_name, s.department, s.semester, t.fullname as teacher_name
             FROM practical_sessions ps
             JOIN subjects s ON ps.subject_id = s.subject_code
@@ -1508,6 +1529,7 @@ def practical_session(subject_code):
     teacher_id = None
     teacher_name = session.get("fullname", "Faculty Member")
     active_session = None
+    evaluated_students = []
 
     if role == "teacher":
         cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
@@ -1525,6 +1547,7 @@ def practical_session(subject_code):
             # Check if there is an active session for this subject
             cursor.execute("""
                 SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.start_time, ps.end_time, ps.status,
+                       ps.experiment_no, ps.experiment_name,
                        s.subject_name, s.department, s.semester, t.fullname as teacher_name
                 FROM practical_sessions ps
                 JOIN subjects s ON ps.subject_id = s.subject_code
@@ -1534,6 +1557,17 @@ def practical_session(subject_code):
             """, (teacher_id, subject_code))
             active_session = cursor.fetchone()
 
+            if active_session:
+                cursor.execute("""
+                    SELECT em.student_id as usn, st.fullname, st.department, st.semester, st.section,
+                           em.practical_marks, em.assignment_marks, em.max_practical_marks, em.max_assignment_marks
+                    FROM experiment_marks em
+                    JOIN students st ON em.student_id = st.usn
+                    WHERE em.session_id = ?
+                    ORDER BY em.id DESC
+                """, (active_session["id"],))
+                evaluated_students = cursor.fetchall()
+
     conn.close()
 
     return render_template(
@@ -1542,10 +1576,270 @@ def practical_session(subject_code):
         subject_name=subject["subject_name"],
         subject_code=subject["subject_code"],
         active_session=active_session,
+        evaluated_students=evaluated_students,
         teacher_id=teacher_id,
         teacher_name=teacher_name,
         today=date.today().isoformat()
     )
+
+
+# ---------------- SCAN STUDENT QR CODE (DAY 8) ----------------
+@app.route("/scan_student_qr", methods=["POST"])
+@role_required("teacher")
+def scan_student_qr():
+    """Identifies student from scanned USN QR, verifies active session ownership,
+    automatically marks attendance, and returns student info with any existing marks."""
+    data = request.get_json(silent=True) or request.form
+    session_id = data.get("session_id")
+    usn = data.get("usn", "").strip().upper()
+
+    if not session_id or not usn:
+        return jsonify({"success": False, "error": "Missing session ID or student USN."}), 400
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Identify logged-in teacher
+    cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        return jsonify({"success": False, "error": "Faculty record not found."}), 403
+
+    teacher_id = tch["teacher_id"]
+
+    # Retrieve and verify active session ownership
+    cursor.execute("""
+        SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.status,
+               ps.experiment_no, ps.experiment_name, s.subject_name
+        FROM practical_sessions ps
+        JOIN subjects s ON ps.subject_id = s.subject_code
+        WHERE ps.id = ?
+    """, (session_id,))
+    sess = cursor.fetchone()
+
+    if not sess:
+        conn.close()
+        return jsonify({"success": False, "error": "Practical session not found."}), 404
+
+    if sess["teacher_id"] != teacher_id:
+        conn.close()
+        return jsonify({"success": False, "error": "Unauthorized: This session belongs to another faculty instructor."}), 403
+
+    if sess["status"] != "active":
+        conn.close()
+        return jsonify({"success": False, "error": "This practical session is not active (status: completed)."}), 400
+
+    # Identify student by USN
+    cursor.execute("""
+        SELECT usn, fullname, email, department, semester, section
+        FROM students
+        WHERE usn = ?
+    """, (usn,))
+    student = cursor.fetchone()
+
+    if not student:
+        conn.close()
+        return jsonify({"success": False, "error": f"Unknown student USN: '{usn}'. Student record not found in system."}), 404
+
+    # Automatic Attendance Marking
+    # Check if attendance already marked for this session
+    cursor.execute("""
+        SELECT id FROM attendance
+        WHERE student_id = ? AND session_id = ?
+    """, (usn, session_id))
+    att_session = cursor.fetchone()
+
+    attendance_message = "Attendance marked: PRESENT ✓"
+
+    if att_session:
+        attendance_message = "Attendance already marked."
+    else:
+        # Also check date-based duplicate fallback
+        cursor.execute("""
+            SELECT id FROM attendance
+            WHERE student_id = ? AND subject_id = ? AND attendance_date = ? AND teacher_id = ?
+        """, (usn, sess["subject_id"], sess["session_date"], teacher_id))
+        att_fallback = cursor.fetchone()
+        if att_fallback:
+            attendance_message = "Attendance already marked."
+            cursor.execute("UPDATE attendance SET session_id = ? WHERE id = ?", (session_id, att_fallback["id"]))
+            conn.commit()
+        else:
+            try:
+                cursor.execute("""
+                    INSERT INTO attendance (student_id, subject_id, teacher_id, attendance_date, status, session_id)
+                    VALUES (?, ?, ?, ?, 'Present', ?)
+                """, (usn, sess["subject_id"], teacher_id, sess["session_date"], session_id))
+                conn.commit()
+                attendance_message = "Attendance marked: PRESENT ✓"
+            except Exception as e:
+                pass
+
+    # Check for existing experiment marks for this student and session
+    cursor.execute("""
+        SELECT practical_marks, assignment_marks
+        FROM experiment_marks
+        WHERE session_id = ? AND student_id = ?
+    """, (session_id, usn))
+    existing_marks = cursor.fetchone()
+
+    p_marks = existing_marks["practical_marks"] if existing_marks else 0
+    a_marks = existing_marks["assignment_marks"] if existing_marks else 0
+
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "student": {
+            "usn": student["usn"],
+            "fullname": student["fullname"],
+            "department": student["department"],
+            "semester": student["semester"],
+            "section": student["section"]
+        },
+        "session": {
+            "id": sess["id"],
+            "subject_id": sess["subject_id"],
+            "subject_name": sess["subject_name"],
+            "experiment_no": sess["experiment_no"] or "Experiment",
+            "experiment_name": sess["experiment_name"] or "Practical Lab Session",
+            "session_date": sess["session_date"]
+        },
+        "attendance_status": "Present",
+        "attendance_message": attendance_message,
+        "practical_marks": p_marks,
+        "assignment_marks": a_marks
+    })
+
+
+# ---------------- SAVE SESSION PRACTICAL & ASSIGNMENT MARKS (DAY 8) ----------------
+@app.route("/save_session_marks", methods=["POST"])
+@role_required("teacher")
+def save_session_marks():
+    """Saves practical and assignment marks for a student in an active practical session.
+    Validates mark limits (0-10 for practical, 0-5 for assignment) and records linked data."""
+    data = request.get_json(silent=True) or request.form
+    session_id = data.get("session_id")
+    student_id = data.get("student_id", "").strip().upper()
+    practical_marks_raw = data.get("practical_marks")
+    assignment_marks_raw = data.get("assignment_marks")
+
+    if not session_id or not student_id:
+        return jsonify({"success": False, "error": "Missing session ID or student identifier."}), 400
+
+    # Validate numeric marks
+    try:
+        practical_marks = float(practical_marks_raw)
+        assignment_marks = float(assignment_marks_raw)
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "error": "Invalid marks entered. Marks must be valid numeric values."}), 400
+
+    # Range validations
+    if practical_marks < 0 or practical_marks > 10:
+        return jsonify({"success": False, "error": "Practical experiment marks must be between 0 and 10."}), 400
+
+    if assignment_marks < 0 or assignment_marks > 5:
+        return jsonify({"success": False, "error": "Assignment marks must be between 0 and 5."}), 400
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Identify teacher
+    cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        return jsonify({"success": False, "error": "Faculty profile record not found."}), 403
+
+    teacher_id = tch["teacher_id"]
+
+    # Validate active session ownership
+    cursor.execute("""
+        SELECT ps.id, ps.teacher_id, ps.subject_id, ps.session_date, ps.status,
+               ps.experiment_no, ps.experiment_name
+        FROM practical_sessions ps
+        WHERE ps.id = ?
+    """, (session_id,))
+    sess = cursor.fetchone()
+
+    if not sess:
+        conn.close()
+        return jsonify({"success": False, "error": "Practical session not found."}), 404
+
+    if sess["teacher_id"] != teacher_id:
+        conn.close()
+        return jsonify({"success": False, "error": "Unauthorized: You cannot modify evaluations for another instructor's session."}), 403
+
+    if sess["status"] != "active":
+        conn.close()
+        return jsonify({"success": False, "error": "Cannot save marks: This practical session is already completed."}), 400
+
+    # Validate student
+    cursor.execute("SELECT usn, fullname FROM students WHERE usn = ?", (student_id,))
+    student = cursor.fetchone()
+    if not student:
+        conn.close()
+        return jsonify({"success": False, "error": f"Student '{student_id}' not found in system."}), 404
+
+    # Ensure attendance is marked Present
+    cursor.execute("""
+        SELECT id FROM attendance
+        WHERE student_id = ? AND session_id = ?
+    """, (student_id, session_id))
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO attendance (student_id, subject_id, teacher_id, attendance_date, status, session_id)
+            VALUES (?, ?, ?, ?, 'Present', ?)
+        """, (student_id, sess["subject_id"], teacher_id, sess["session_date"], session_id))
+
+    # Upsert into experiment_marks
+    cursor.execute("""
+        SELECT id FROM experiment_marks
+        WHERE session_id = ? AND student_id = ?
+    """, (session_id, student_id))
+    existing_em = cursor.fetchone()
+
+    today_str = date.today().isoformat()
+
+    try:
+        if existing_em:
+            cursor.execute("""
+                UPDATE experiment_marks
+                SET practical_marks = ?, assignment_marks = ?, recorded_date = ?
+                WHERE id = ?
+            """, (practical_marks, assignment_marks, today_str, existing_em["id"]))
+        else:
+            cursor.execute("""
+                INSERT INTO experiment_marks (
+                    session_id, student_id, subject_id, teacher_id,
+                    experiment_no, experiment_name,
+                    practical_marks, assignment_marks,
+                    max_practical_marks, max_assignment_marks,
+                    recorded_date
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 10, 5, ?)
+            """, (
+                session_id, student_id, sess["subject_id"], teacher_id,
+                sess["experiment_no"], sess["experiment_name"],
+                practical_marks, assignment_marks,
+                today_str
+            ))
+        conn.commit()
+        conn.close()
+        return jsonify({
+            "success": True,
+            "message": "Attendance and marks saved successfully.",
+            "usn": student["usn"],
+            "student_name": student["fullname"],
+            "practical_marks": practical_marks,
+            "assignment_marks": assignment_marks
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"success": False, "error": f"Database error while saving marks: {str(e)}"}), 500
 
 
 # ---------------- ABOUT ----------------
