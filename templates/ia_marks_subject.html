@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject['subject_name'] }} | IA Marks Gradebook | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .gradebook-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid #334155;
+            border-radius: var(--radius-xl);
+            padding: 28px 32px;
+            color: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+            margin-bottom: 24px;
+        }
+
+        .upload-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            max-width: 560px;
+            width: 90%;
+            padding: 32px;
+            box-shadow: var(--shadow-xl);
+            animation: fadeIn 0.2s ease-out;
+        }
+    </style>
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 1320px; margin: 30px auto; padding: 0 24px;">
+
+        <!-- Top Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-arrow-left"></i> Faculty Dashboard
+                </a>
+                <a href="{{ url_for('teacher_subjects') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-book"></i> My Subjects
+                </a>
+                <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-history"></i> Sessions Log
+                </a>
+            </div>
+            <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" type="button">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <!-- Alert Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div style="background: {% if category == 'error' %}#fef2f2{% elif category == 'success' %}#ecfdf5{% else %}#eff6ff{% endif %}; border: 1px solid {% if category == 'error' %}#fecaca{% elif category == 'success' %}#a7f3d0{% else %}#bfdbfe{% endif %}; color: {% if category == 'error' %}#dc2626{% elif category == 'success' %}#059669{% else %}#1d4ed8{% endif %}; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}" style="font-size: 18px;"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Gradebook Banner -->
+        <div class="gradebook-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 4px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700; margin-bottom: 12px;">
+                        <i class="fas fa-award"></i> CONTINUOUS INTERNAL EVALUATION (CIE) GRADEBOOK
+                    </div>
+
+                    <h1 style="font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #ffffff;">
+                        {{ subject['subject_name'] }}
+                    </h1>
+
+                    <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 14px; color: #94a3b8;">
+                        <span><strong style="color: #ffffff;"><i class="fas fa-tag" style="color: #38bdf8;"></i> Code:</strong> {{ subject['subject_code'] }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-building-columns" style="color: #38bdf8;"></i> Dept:</strong> {{ subject['department'] }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-graduation-cap" style="color: #38bdf8;"></i> Semester:</strong> Sem {{ subject['semester'] }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-user-tie" style="color: #38bdf8;"></i> Instructor:</strong> {{ teacher_name }}</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <a href="{{ url_for('ia_marks_manual', subject_code=subject['subject_code']) }}" class="btn btn-primary" style="background: #4f46e5; border-color: #4f46e5; padding: 12px 22px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);">
+                        <i class="fas fa-edit"></i> Manual Marks Entry
+                    </a>
+                    <button type="button" class="btn btn-primary" onclick="openPptUploadModal()" style="background: #ea580c; border-color: #ea580c; padding: 12px 22px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);">
+                        <i class="fas fa-file-powerpoint"></i> Bulk Import PPTX
+                    </button>
+                    <a href="{{ url_for('practical_session', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="border-color: rgba(255,255,255,0.3); color: #ffffff; padding: 12px 18px; font-size: 14px;">
+                        <i class="fas fa-flask"></i> Lab Cockpit
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gradebook Summary Statistics -->
+        <section class="cards-grid" style="margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Enrolled Strength</h3>
+                    <div class="stat-value" style="color: #0284c7;">{{ students_marks|length }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Registered students</span>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>IA-1 Graded</h3>
+                    <div class="stat-value" style="color: #4f46e5;">{{ stats['ia1_count'] }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Evaluated (/20)</span>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>IA-2 Graded</h3>
+                    <div class="stat-value" style="color: #d97706;">{{ stats['ia2_count'] }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Evaluated (/20)</span>
+                </div>
+                <div class="stat-icon icon-amber">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>CIE Class Average</h3>
+                    <div class="stat-value" style="color: #10b981;">{{ stats['avg_total'] }} / 35</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Cumulative Average</span>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gradebook Master Table -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 30px;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                        <i class="fas fa-table" style="color: var(--primary); margin-right: 6px;"></i> Class Assessment Matrix
+                    </h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">Continuous assessment scores combining IA tests, practical evaluations, and assignments</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <span class="badge badge-info" style="font-size: 12px; padding: 6px 12px;">Max Marks: IA=20, Lab=10, Assign=5</span>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">USN</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Student Name</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Sec</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-1 (/20)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-2 (/20)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA Avg (/20)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical Avg (/10)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/5)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Score (/35)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if students_marks %}
+                            {% for st in students_marks %}
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 14px 20px;">
+                                    <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                                        {{ st['usn'] }}
+                                    </span>
+                                </td>
+                                <td style="padding: 14px 20px; font-weight: 600; color: var(--text-main);">
+                                    {{ st['fullname'] }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-size: 13px; color: var(--text-muted);">
+                                    {{ st['section'] }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #4f46e5;">
+                                    {{ st['ia1'] if st['ia1'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #d97706;">
+                                    {{ st['ia2'] if st['ia2'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #0284c7;">
+                                    {{ st['ia_avg'] if st['ia_avg'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #7c3aed;">
+                                    {{ st['practical_avg'] if st['practical_avg'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #059669;">
+                                    {{ st['assignment_avg'] if st['assignment_avg'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 800; font-size: 15px; color: var(--text-main);">
+                                    {{ st['total_score'] if st['total_score'] is not none else '—' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
+                                    <i class="fas fa-users-slash" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+                                    No students enrolled in this department / semester for course {{ subject['subject_code'] }}.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= PPT UPLOAD MODAL ================= -->
+    <div id="pptUploadModal" class="upload-modal">
+        <div class="modal-content-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: #ffedd5; color: #ea580c; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                        <i class="fas fa-file-powerpoint"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">Bulk Import IA Marks</h3>
+                        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Upload class PowerPoint presentation (.pptx)</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closePptUploadModal()" style="background: none; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form action="{{ url_for('upload_ppt_marks', subject_code=subject['subject_code']) }}" method="POST" enctype="multipart/form-data">
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Target Assessment Component <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select name="ia_type" required class="form-control" style="width: 100%; padding: 10px 14px;">
+                        <option value="IA1" selected>Internal Assessment-1 (IA-1)</option>
+                        <option value="IA2">Internal Assessment-2 (IA-2)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Select PowerPoint File (.pptx) <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="file" name="ppt_file" accept=".pptx" required class="form-control" style="width: 100%; padding: 10px 14px;">
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 0 0;">
+                        <i class="fas fa-info-circle"></i> Accepts .pptx files containing a table with <strong>USN</strong> and <strong>Marks</strong> columns.
+                    </p>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closePptUploadModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: #ea580c; border-color: #ea580c; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-upload"></i> Upload & Preview
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script>
+        function openPptUploadModal() {
+            document.getElementById('pptUploadModal').style.display = 'flex';
+        }
+
+        function closePptUploadModal() {
+            document.getElementById('pptUploadModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('pptUploadModal');
+            if (event.target === modal) {
+                closePptUploadModal();
+            }
+        };
+    </script>
+</body>
+</html>

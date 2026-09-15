@@ -6,9 +6,11 @@ from datetime import date, datetime
 from functools import wraps
 from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 from database import init_db, get_db_connection
 from generate_qr import generate_student_qr, ensure_student_qr
+from ppt_importer import parse_pptx_ia_marks
 
 app = Flask(__name__)
 app.secret_key = "siams_secret_key_2026"
@@ -196,6 +198,8 @@ def student():
     student_data = cursor.fetchone()
 
     experiment_evaluations = []
+    ia_scores = []
+
     # Automatically ensure QR code exists for this student & fetch live marks
     if student_data:
         usn = student_data["usn"]
@@ -210,7 +214,7 @@ def student():
             """, (email,))
             student_data = cursor.fetchone()
 
-        # Live fetch practical experiment evaluations & marks recorded by teachers
+        # Live fetch practical experiment evaluations & marks recorded by teachers (Day 8)
         cursor.execute("""
             SELECT em.experiment_no, em.experiment_name, em.practical_marks, em.assignment_marks,
                    em.max_practical_marks, em.max_assignment_marks, em.recorded_date,
@@ -223,12 +227,58 @@ def student():
         """, (usn,))
         experiment_evaluations = cursor.fetchall()
 
+        # Live fetch continuous internal assessment (IA) marks for all courses in student's department/semester (Day 9)
+        cursor.execute("""
+            SELECT s.subject_code, s.subject_name,
+                   im.ia1, im.ia2, im.max_ia1, im.max_ia2
+            FROM subjects s
+            LEFT JOIN internal_marks im ON s.subject_code = im.subject_id AND im.student_id = ?
+            WHERE s.department = ? AND s.semester = ?
+            ORDER BY s.subject_code ASC
+        """, (usn, student_data["department"], student_data["semester"]))
+        raw_ia_records = cursor.fetchall()
+
+        for r in raw_ia_records:
+            sub_code = r["subject_code"]
+            ia1_val = r["ia1"]
+            ia2_val = r["ia2"]
+
+            # Calculate IA Average (/20)
+            valid_ias = [float(x) for x in [ia1_val, ia2_val] if x is not None and str(x) != ""]
+            ia_avg = round(sum(valid_ias) / len(valid_ias), 2) if valid_ias else None
+
+            # Fetch Practical and Assignment averages from experiment_marks (Day 8)
+            cursor.execute("""
+                SELECT AVG(practical_marks) as avg_p, AVG(assignment_marks) as avg_a
+                FROM experiment_marks
+                WHERE student_id = ? AND subject_id = ?
+            """, (usn, sub_code))
+            exp_stats = cursor.fetchone()
+            prac_avg = round(exp_stats["avg_p"], 2) if exp_stats and exp_stats["avg_p"] is not None else None
+            assign_avg = round(exp_stats["avg_a"], 2) if exp_stats and exp_stats["avg_a"] is not None else None
+
+            # Calculate total continuous evaluation score (/35)
+            total_parts = [p for p in [ia_avg, prac_avg, assign_avg] if p is not None]
+            total_score = round(sum(total_parts), 2) if total_parts else None
+
+            ia_scores.append({
+                "subject_code": sub_code,
+                "subject_name": r["subject_name"],
+                "ia1": ia1_val,
+                "ia2": ia2_val,
+                "ia_avg": ia_avg,
+                "practical_avg": prac_avg,
+                "assignment_avg": assign_avg,
+                "total_score": total_score
+            })
+
     conn.close()
 
     return render_template(
         "student.html",
         student=student_data,
         evaluations=experiment_evaluations,
+        ia_scores=ia_scores,
         fullname=session.get("fullname", (student_data["fullname"] if student_data else "Student"))
     )
 
@@ -1840,6 +1890,620 @@ def save_session_marks():
     except Exception as e:
         conn.close()
         return jsonify({"success": False, "error": f"Database error while saving marks: {str(e)}"}), 500
+
+
+# ====================================================
+# INTERNAL ASSESSMENT (IA) MARKS & PPT IMPORT MODULE (DAY 9)
+# ====================================================
+
+# ---------------- TEACHER IA HUB GATEWAY ----------------
+@app.route("/ia_marks")
+@app.route("/teacher/ia_marks")
+@role_required("teacher")
+def teacher_ia_hub():
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT teacher_id FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    cursor.execute("""
+        SELECT subjects.subject_code
+        FROM teacher_subjects
+        JOIN subjects ON teacher_subjects.subject_id = subjects.subject_code
+        WHERE teacher_subjects.teacher_id = ?
+        ORDER BY subjects.subject_code ASC
+        LIMIT 1
+    """, (teacher_id,))
+    first_sub = cursor.fetchone()
+    conn.close()
+
+    if first_sub:
+        return redirect(url_for("ia_marks_subject", subject_code=first_sub["subject_code"]))
+    else:
+        flash("No courses are currently assigned to your faculty profile. Please contact the administrator.", "info")
+        return redirect(url_for("teacher"))
+
+
+# ---------------- SUBJECT IA GRADEBOOK COCKPIT ----------------
+@app.route("/ia_marks/<subject_code>")
+@role_required("teacher", "admin")
+def ia_marks_subject(subject_code):
+    subject_code = subject_code.strip().upper()
+    role = session.get("role")
+    email = session.get("email")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify subject exists
+    cursor.execute("""
+        SELECT subject_code, subject_name, department, semester
+        FROM subjects
+        WHERE subject_code = ?
+    """, (subject_code,))
+    subject = cursor.fetchone()
+
+    if not subject:
+        conn.close()
+        flash(f"Subject course '{subject_code}' not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_name = session.get("fullname", "Faculty Member")
+
+    # Security check: if teacher role, strictly verify assignment
+    if role == "teacher":
+        cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+        tch = cursor.fetchone()
+        if not tch:
+            conn.close()
+            flash("Faculty record not found.", "error")
+            return redirect(url_for("teacher"))
+
+        teacher_id = tch["teacher_id"]
+        teacher_name = tch["fullname"]
+
+        cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+        if not cursor.fetchone():
+            conn.close()
+            flash(f"Unauthorized: You are not assigned to manage Internal Assessment marks for course '{subject_code}'.", "error")
+            return redirect(url_for("teacher"))
+
+    # Query all students enrolled in this course (matching department & semester)
+    cursor.execute("""
+        SELECT usn, fullname, department, semester, section
+        FROM students
+        WHERE department = ? AND semester = ?
+        ORDER BY usn ASC
+    """, (subject["department"], subject["semester"]))
+    students_in_cohort = cursor.fetchall()
+
+    # Fallback: if no cohort matches strictly, get all students who have marks or attendance
+    if not students_in_cohort:
+        cursor.execute("SELECT usn, fullname, department, semester, section FROM students ORDER BY usn ASC")
+        students_in_cohort = cursor.fetchall()
+
+    students_marks = []
+    ia1_count = 0
+    ia2_count = 0
+    total_scores_list = []
+
+    for st in students_in_cohort:
+        usn = st["usn"]
+
+        # Fetch IA marks
+        cursor.execute("""
+            SELECT ia1, ia2, max_ia1, max_ia2
+            FROM internal_marks
+            WHERE student_id = ? AND subject_id = ?
+        """, (usn, subject_code))
+        im = cursor.fetchone()
+
+        ia1 = im["ia1"] if im and im["ia1"] is not None else None
+        ia2 = im["ia2"] if im and im["ia2"] is not None else None
+
+        if ia1 is not None:
+            ia1_count += 1
+        if ia2 is not None:
+            ia2_count += 1
+
+        # Calculate IA Average (/20)
+        valid_ias = [float(x) for x in [ia1, ia2] if x is not None and str(x) != ""]
+        ia_avg = round(sum(valid_ias) / len(valid_ias), 2) if valid_ias else None
+
+        # Fetch Practical & Assignment Averages from experiment_marks (Day 8)
+        cursor.execute("""
+            SELECT AVG(practical_marks) as avg_p, AVG(assignment_marks) as avg_a
+            FROM experiment_marks
+            WHERE student_id = ? AND subject_id = ?
+        """, (usn, subject_code))
+        exp_stats = cursor.fetchone()
+        prac_avg = round(exp_stats["avg_p"], 2) if exp_stats and exp_stats["avg_p"] is not None else None
+        assign_avg = round(exp_stats["avg_a"], 2) if exp_stats and exp_stats["avg_a"] is not None else None
+
+        # Calculate Total Score (/35)
+        components = [c for c in [ia_avg, prac_avg, assign_avg] if c is not None]
+        total_score = round(sum(components), 2) if components else None
+
+        if total_score is not None:
+            total_scores_list.append(total_score)
+
+        students_marks.append({
+            "usn": usn,
+            "fullname": st["fullname"],
+            "section": st["section"],
+            "ia1": ia1,
+            "ia2": ia2,
+            "ia_avg": ia_avg,
+            "practical_avg": prac_avg,
+            "assignment_avg": assign_avg,
+            "total_score": total_score
+        })
+
+    avg_class_total = round(sum(total_scores_list) / len(total_scores_list), 1) if total_scores_list else 0
+
+    stats = {
+        "ia1_count": ia1_count,
+        "ia2_count": ia2_count,
+        "avg_total": avg_class_total
+    }
+
+    conn.close()
+
+    return render_template(
+        "ia_marks_subject.html",
+        subject=subject,
+        students_marks=students_marks,
+        stats=stats,
+        teacher_name=teacher_name
+    )
+
+
+# ---------------- MANUAL IA MARKS ENTRY ----------------
+@app.route("/ia_marks/manual/<subject_code>", methods=["GET"])
+@role_required("teacher")
+def ia_marks_manual(subject_code):
+    subject_code = subject_code.strip().upper()
+    ia_type = request.args.get("ia_type", "IA1").strip().upper()
+    if ia_type not in ["IA1", "IA2"]:
+        ia_type = "IA1"
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Identify teacher & verify assignment
+    cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile record not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+    if not cursor.fetchone():
+        conn.close()
+        flash(f"Unauthorized: Course '{subject_code}' is not assigned to you.", "error")
+        return redirect(url_for("teacher"))
+
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    # Query students in cohort
+    cursor.execute("""
+        SELECT usn, fullname, department, semester, section
+        FROM students
+        WHERE department = ? AND semester = ?
+        ORDER BY usn ASC
+    """, (subject["department"], subject["semester"]))
+    students_list = cursor.fetchall()
+
+    if not students_list:
+        cursor.execute("SELECT usn, fullname, department, semester, section FROM students ORDER BY usn ASC")
+        students_list = cursor.fetchall()
+
+    students_with_marks = []
+    for st in students_list:
+        cursor.execute("SELECT ia1, ia2 FROM internal_marks WHERE student_id = ? AND subject_id = ?", (st["usn"], subject_code))
+        im = cursor.fetchone()
+        students_with_marks.append({
+            "usn": st["usn"],
+            "fullname": st["fullname"],
+            "section": st["section"],
+            "ia1": im["ia1"] if im else None,
+            "ia2": im["ia2"] if im else None
+        })
+
+    conn.close()
+
+    return render_template(
+        "ia_marks_manual.html",
+        subject=subject,
+        students=students_with_marks,
+        ia_type=ia_type
+    )
+
+
+# ---------------- SAVE MANUAL IA MARKS ----------------
+@app.route("/ia_marks/save_manual/<subject_code>", methods=["POST"])
+@role_required("teacher")
+def save_manual_ia_marks(subject_code):
+    subject_code = subject_code.strip().upper()
+    ia_type = request.form.get("ia_type", "IA1").strip().upper()
+    if ia_type not in ["IA1", "IA2"]:
+        ia_type = "IA1"
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT teacher_id, fullname FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+    if not cursor.fetchone():
+        conn.close()
+        flash(f"Unauthorized: You cannot modify marks for '{subject_code}'.", "error")
+        return redirect(url_for("teacher"))
+
+    # Iterate over form entries: key format "mark_<usn>"
+    today_str = date.today().isoformat()
+    saved_count = 0
+    errors = []
+
+    for key, val in request.form.items():
+        if key.startswith("mark_"):
+            usn = key.replace("mark_", "").strip().upper()
+            val_str = val.strip()
+            if not val_str:
+                continue
+
+            try:
+                numeric_val = float(val_str)
+            except (ValueError, TypeError):
+                errors.append(f"Invalid non-numeric mark '{val_str}' for student {usn}.")
+                continue
+
+            if numeric_val < 0 or numeric_val > 20:
+                errors.append(f"Marks ({numeric_val}) for student {usn} must be between 0 and 20.")
+                continue
+
+            # Upsert into internal_marks
+            cursor.execute("SELECT id, ia1, ia2 FROM internal_marks WHERE student_id = ? AND subject_id = ?", (usn, subject_code))
+            existing = cursor.fetchone()
+
+            if existing:
+                if ia_type == "IA1":
+                    cursor.execute("""
+                        UPDATE internal_marks
+                        SET ia1 = ?, teacher_id = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (numeric_val, teacher_id, today_str, existing["id"]))
+                else:
+                    cursor.execute("""
+                        UPDATE internal_marks
+                        SET ia2 = ?, teacher_id = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (numeric_val, teacher_id, today_str, existing["id"]))
+            else:
+                if ia_type == "IA1":
+                    cursor.execute("""
+                        INSERT INTO internal_marks (student_id, subject_id, ia1, ia2, max_ia1, max_ia2, teacher_id, updated_at)
+                        VALUES (?, ?, ?, NULL, 20, 20, ?, ?)
+                    """, (usn, subject_code, numeric_val, teacher_id, today_str))
+                else:
+                    cursor.execute("""
+                        INSERT INTO internal_marks (student_id, subject_id, ia1, ia2, max_ia1, max_ia2, teacher_id, updated_at)
+                        VALUES (?, ?, NULL, ?, 20, 20, ?, ?)
+                    """, (usn, subject_code, numeric_val, teacher_id, today_str))
+
+            saved_count += 1
+
+    conn.commit()
+    conn.close()
+
+    if errors:
+        for err in errors[:3]:
+            flash(err, "error")
+
+    flash(f"Successfully saved {ia_type} marks for {saved_count} students.", "success")
+    return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+
+# ---------------- UPLOAD PPT/PPTX & STAGING PREVIEW (DAY 9) ----------------
+@app.route("/ia_marks/upload_ppt/<subject_code>", methods=["POST"])
+@role_required("teacher")
+def upload_ppt_marks(subject_code):
+    subject_code = subject_code.strip().upper()
+    ia_type = request.form.get("ia_type", "IA1").strip().upper()
+    if ia_type not in ["IA1", "IA2"]:
+        ia_type = "IA1"
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verify teacher assignment
+    cursor.execute("SELECT teacher_id FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+    if not cursor.fetchone():
+        conn.close()
+        flash(f"Unauthorized: Course '{subject_code}' is not assigned to you.", "error")
+        return redirect(url_for("teacher"))
+
+    cursor.execute("SELECT subject_name FROM subjects WHERE subject_code = ?", (subject_code,))
+    sub_row = cursor.fetchone()
+    subject_name = sub_row["subject_name"] if sub_row else subject_code
+    conn.close()
+
+    # Validate file
+    if "ppt_file" not in request.files:
+        flash("No presentation file selected for upload.", "error")
+        return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+    file = request.files["ppt_file"]
+    if not file or not file.filename:
+        flash("No file was chosen. Please select a valid .pptx PowerPoint file.", "error")
+        return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+    orig_name = secure_filename(file.filename)
+    if not orig_name.lower().endswith(".pptx"):
+        flash("Invalid file format! Please upload a valid PowerPoint presentation (.pptx) file.", "error")
+        return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+    # Save to staging upload directory
+    upload_dir = os.path.join(app.root_path, "static", "uploads", "ppt")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    saved_filename = f"{subject_code}_{ia_type}_{timestamp}_{orig_name}"
+    saved_path = os.path.join(upload_dir, saved_filename)
+    file.save(saved_path)
+
+    # Parse presentation
+    parsed_result = parse_pptx_ia_marks(saved_path, subject_code, ia_type=ia_type, max_marks=20.0)
+
+    if not parsed_result["success"]:
+        # Clean up failed upload file
+        if os.path.exists(saved_path):
+            os.remove(saved_path)
+        flash(parsed_result.get("error", "Failed to parse presentation file."), "error")
+        return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+    # Save parsed data into staging session
+    session["staged_ppt_import"] = {
+        "saved_path": saved_path,
+        "subject_code": subject_code,
+        "subject_name": subject_name,
+        "ia_type": ia_type,
+        "filename": orig_name,
+        "max_marks": 20.0,
+        "summary": parsed_result["summary"],
+        "rows": parsed_result["rows"]
+    }
+
+    return render_template(
+        "ia_marks_import_preview.html",
+        subject_code=subject_code,
+        subject_name=subject_name,
+        ia_type=ia_type,
+        filename=orig_name,
+        max_marks=20.0,
+        summary=parsed_result["summary"],
+        rows=parsed_result["rows"]
+    )
+
+
+# ---------------- CONFIRM & APPLY BULK PPT IMPORT ----------------
+@app.route("/ia_marks/confirm_import", methods=["POST"])
+@role_required("teacher")
+def confirm_ppt_import():
+    staged = session.get("staged_ppt_import")
+    if not staged:
+        flash("No active staging import found or session expired. Please upload the PPTX file again.", "error")
+        return redirect(url_for("teacher"))
+
+    subject_code = staged["subject_code"]
+    ia_type = staged["ia_type"]
+    rows = staged["rows"]
+    saved_path = staged.get("saved_path")
+
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT teacher_id FROM teachers WHERE email = ?", (email,))
+    tch = cursor.fetchone()
+    if not tch:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    teacher_id = tch["teacher_id"]
+
+    cursor.execute("SELECT id FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?", (teacher_id, subject_code))
+    if not cursor.fetchone():
+        conn.close()
+        flash(f"Unauthorized: You cannot import marks for course '{subject_code}'.", "error")
+        return redirect(url_for("teacher"))
+
+    today_str = date.today().isoformat()
+    imported_count = 0
+    updated_count = 0
+    skipped_count = 0
+
+    for r in rows:
+        if r.get("is_valid") and r.get("marks") is not None:
+            usn = r["usn"]
+            mark_val = float(r["marks"])
+
+            cursor.execute("SELECT id, ia1, ia2 FROM internal_marks WHERE student_id = ? AND subject_id = ?", (usn, subject_code))
+            existing = cursor.fetchone()
+
+            if existing:
+                if ia_type == "IA1":
+                    cursor.execute("""
+                        UPDATE internal_marks
+                        SET ia1 = ?, teacher_id = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (mark_val, teacher_id, today_str, existing["id"]))
+                else:
+                    cursor.execute("""
+                        UPDATE internal_marks
+                        SET ia2 = ?, teacher_id = ?, updated_at = ?
+                        WHERE id = ?
+                    """, (mark_val, teacher_id, today_str, existing["id"]))
+                
+                if r["status"] == "valid_update":
+                    updated_count += 1
+                else:
+                    imported_count += 1
+            else:
+                if ia_type == "IA1":
+                    cursor.execute("""
+                        INSERT INTO internal_marks (student_id, subject_id, ia1, ia2, max_ia1, max_ia2, teacher_id, updated_at)
+                        VALUES (?, ?, ?, NULL, 20, 20, ?, ?)
+                    """, (usn, subject_code, mark_val, teacher_id, today_str))
+                else:
+                    cursor.execute("""
+                        INSERT INTO internal_marks (student_id, subject_id, ia1, ia2, max_ia1, max_ia2, teacher_id, updated_at)
+                        VALUES (?, ?, NULL, ?, 20, 20, ?, ?)
+                    """, (usn, subject_code, mark_val, teacher_id, today_str))
+                imported_count += 1
+        else:
+            skipped_count += 1
+
+    conn.commit()
+    conn.close()
+
+    # Clean up uploaded temporary presentation file
+    if saved_path and os.path.exists(saved_path):
+        try:
+            os.remove(saved_path)
+        except Exception:
+            pass
+
+    session.pop("staged_ppt_import", None)
+
+    flash(f"Bulk Import Complete! Successfully saved {imported_count} new marks, updated {updated_count} marks, and skipped {skipped_count} invalid records.", "success")
+    return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+
+# ---------------- CANCEL BULK PPT IMPORT ----------------
+@app.route("/ia_marks/cancel_import/<subject_code>")
+@role_required("teacher")
+def cancel_ppt_import(subject_code):
+    staged = session.get("staged_ppt_import")
+    if staged and staged.get("saved_path") and os.path.exists(staged["saved_path"]):
+        try:
+            os.remove(staged["saved_path"])
+        except Exception:
+            pass
+
+    session.pop("staged_ppt_import", None)
+    flash("Bulk presentation import cancelled. No marks were modified.", "info")
+    return redirect(url_for("ia_marks_subject", subject_code=subject_code))
+
+
+# ---------------- ADMIN INSTITUTIONAL MARKS ROSTER ----------------
+@app.route("/admin/marks")
+@role_required("admin")
+def admin_marks():
+    selected_subject = request.args.get("subject", "").strip().upper()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get all subjects for dropdown filter
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects ORDER BY subject_code ASC")
+    all_subjects = cursor.fetchall()
+
+    if selected_subject:
+        cursor.execute("""
+            SELECT im.student_id, st.fullname, im.subject_id, s.subject_name,
+                   im.ia1, im.ia2, im.max_ia1, im.max_ia2
+            FROM internal_marks im
+            JOIN students st ON im.student_id = st.usn
+            JOIN subjects s ON im.subject_id = s.subject_code
+            WHERE im.subject_id = ?
+            ORDER BY im.student_id ASC
+        """, (selected_subject,))
+    else:
+        cursor.execute("""
+            SELECT im.student_id, st.fullname, im.subject_id, s.subject_name,
+                   im.ia1, im.ia2, im.max_ia1, im.max_ia2
+            FROM internal_marks im
+            JOIN students st ON im.student_id = st.usn
+            JOIN subjects s ON im.subject_id = s.subject_code
+            ORDER BY im.subject_id ASC, im.student_id ASC
+        """)
+    raw_records = cursor.fetchall()
+
+    marks_records = []
+    for r in raw_records:
+        usn = r["student_id"]
+        sub_code = r["subject_id"]
+        ia1_val = r["ia1"]
+        ia2_val = r["ia2"]
+
+        valid_ias = [float(x) for x in [ia1_val, ia2_val] if x is not None and str(x) != ""]
+        ia_avg = round(sum(valid_ias) / len(valid_ias), 2) if valid_ias else None
+
+        cursor.execute("""
+            SELECT AVG(practical_marks) as avg_p, AVG(assignment_marks) as avg_a
+            FROM experiment_marks
+            WHERE student_id = ? AND subject_id = ?
+        """, (usn, sub_code))
+        exp_stats = cursor.fetchone()
+        prac_avg = round(exp_stats["avg_p"], 2) if exp_stats and exp_stats["avg_p"] is not None else None
+        assign_avg = round(exp_stats["avg_a"], 2) if exp_stats and exp_stats["avg_a"] is not None else None
+
+        components = [c for c in [ia_avg, prac_avg, assign_avg] if c is not None]
+        total_score = round(sum(components), 2) if components else None
+
+        marks_records.append({
+            "student_id": usn,
+            "fullname": r["fullname"],
+            "subject_id": sub_code,
+            "subject_name": r["subject_name"],
+            "ia1": ia1_val,
+            "ia2": ia2_val,
+            "ia_avg": ia_avg,
+            "practical_avg": prac_avg,
+            "assignment_avg": assign_avg,
+            "total_score": total_score
+        })
+
+    conn.close()
+
+    return render_template(
+        "admin_marks.html",
+        all_subjects=all_subjects,
+        selected_subject=selected_subject,
+        marks_records=marks_records
+    )
 
 
 # ---------------- ABOUT ----------------

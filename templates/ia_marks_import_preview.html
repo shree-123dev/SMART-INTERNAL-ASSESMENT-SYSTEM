@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPT Import Preview | {{ subject_code }} | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .preview-header-card {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid #334155;
+            border-radius: var(--radius-xl);
+            padding: 28px 32px;
+            color: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+            margin-bottom: 24px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-pill.valid_new {
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status-pill.valid_update {
+            background: #fffbeb;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+
+        .status-pill.unchanged {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+        }
+
+        .status-pill.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 1280px; margin: 30px auto; padding: 0 24px;">
+
+        <!-- Top Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ url_for('ia_marks_subject', subject_code=subject_code) }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-arrow-left"></i> Cancel & Return to Gradebook
+                </a>
+            </div>
+            <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" type="button">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <!-- Staging Preview Header -->
+        <div class="preview-header-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(234, 88, 12, 0.2); border: 1px solid rgba(234, 88, 12, 0.4); color: #fb923c; padding: 4px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700; margin-bottom: 12px;">
+                        <i class="fas fa-file-powerpoint"></i> PPTX BULK IMPORT STAGING PREVIEW
+                    </div>
+
+                    <h1 style="font-size: 26px; font-weight: 800; margin: 0 0 6px 0; color: #ffffff;">
+                        {{ subject_name }} ({{ subject_code }})
+                    </h1>
+
+                    <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 14px; color: #94a3b8;">
+                        <span><strong style="color: #ffffff;"><i class="fas fa-layer-group" style="color: #fb923c;"></i> Component:</strong> {{ ia_type }} (Max {{ max_marks }} Marks)</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-file-alt" style="color: #fb923c;"></i> File:</strong> {{ filename }}</span>
+                        <span><strong style="color: #ffffff;"><i class="fas fa-list-ol" style="color: #fb923c;"></i> Total Extracted:</strong> {{ summary['total_rows'] }} Records</span>
+                    </div>
+                </div>
+
+                <!-- Form to Confirm Final Import -->
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <a href="{{ url_for('cancel_ppt_import', subject_code=subject_code) }}" class="btn btn-outline" style="border-color: rgba(255,255,255,0.3); color: #ffffff; padding: 12px 20px;">
+                        <i class="fas fa-times"></i> Discard
+                    </a>
+                    <form action="{{ url_for('confirm_ppt_import') }}" method="POST">
+                        <button type="submit" class="btn btn-primary" style="background: #10b981; border-color: #10b981; padding: 12px 28px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                            <i class="fas fa-check-circle"></i> Confirm & Import Valid Marks
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Statistics Grid -->
+        <section class="cards-grid" style="margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>New Valid Records</h3>
+                    <div class="stat-value" style="color: #10b981;">{{ summary['ready_to_import'] }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ready to insert</span>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Updates to Existing</h3>
+                    <div class="stat-value" style="color: #d97706;">{{ summary['to_update'] }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Will update old marks</span>
+                </div>
+                <div class="stat-icon icon-amber">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Unchanged Records</h3>
+                    <div class="stat-value" style="color: #2563eb;">{{ summary['unchanged'] }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Matches database</span>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-equals"></i>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>Invalid / Skipped</h3>
+                    <div class="stat-value" style="color: #dc2626;">{{ summary['invalid'] + summary['not_found'] + summary['duplicates'] }}</div>
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Errors will be skipped</span>
+                </div>
+                <div class="stat-icon icon-red">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preview Staging Table -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 30px;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                        <i class="fas fa-tasks" style="color: var(--primary); margin-right: 6px;"></i> Extracted Student Marks Preview
+                    </h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">Inspect rows and validation status before final database commit</p>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Slide</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">USN (In PPT)</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Name (In PPT)</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Matched Student (DB)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Extracted Mark</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status / Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows %}
+                            {% for r in rows %}
+                            <tr style="border-bottom: 1px solid var(--border); {% if not r['is_valid'] %}background: #fff5f5;{% endif %}">
+                                <td style="padding: 14px 20px; text-align: center; font-size: 13px; color: var(--text-muted);">
+                                    Slide {{ r['slide_no'] }}
+                                </td>
+                                <td style="padding: 14px 20px;">
+                                    <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                                        {{ r['usn'] or 'EMPTY' }}
+                                    </span>
+                                </td>
+                                <td style="padding: 14px 20px; font-size: 13px; color: var(--text-muted);">
+                                    {{ r['name_in_file'] or '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; font-weight: 600; color: var(--text-main);">
+                                    {% if r['db_name'] %}
+                                        {{ r['db_name'] }} <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">(Sec {{ r['section'] }})</span>
+                                    {% else %}
+                                        <span style="color: #dc2626; font-style: italic;">No Match Found</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 800; font-size: 15px; color: {% if r['marks'] is not none %}#4f46e5{% else %}#dc2626{% endif %};">
+                                    {{ r['raw_marks'] }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center;">
+                                    {% if r['status'] == 'valid_new' %}
+                                        <span class="status-pill valid_new">
+                                            <i class="fas fa-check"></i> Ready to Import
+                                        </span>
+                                    {% elif r['status'] == 'valid_update' %}
+                                        <span class="status-pill valid_update">
+                                            <i class="fas fa-sync-alt"></i> Update: {{ r['old_mark'] }} → {{ r['marks'] }}
+                                        </span>
+                                    {% elif r['status'] == 'unchanged' %}
+                                        <span class="status-pill unchanged">
+                                            <i class="fas fa-equals"></i> Unchanged ({{ r['old_mark'] }})
+                                        </span>
+                                    {% else %}
+                                        <span class="status-pill error" title="{{ r['error_msg'] }}">
+                                            <i class="fas fa-exclamation-circle"></i> {{ r['status_label'] }}
+                                        </span>
+                                        <div style="font-size: 11px; color: #dc2626; margin-top: 2px;">{{ r['error_msg'] }}</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

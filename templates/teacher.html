@@ -72,6 +72,9 @@
                 <a href="{{ url_for('teacher_subjects') }}"><i class="fas fa-book-reader"></i> My Subjects</a>
             </li>
             <li>
+                <a href="{{ url_for('teacher_ia_hub') }}"><i class="fas fa-award"></i> IA Marks & Gradebook</a>
+            </li>
+            <li>
                 <a href="{{ url_for('practical_sessions_history') }}"><i class="fas fa-flask"></i> Practical Sessions</a>
             </li>
             <li>
@@ -259,6 +262,11 @@
                 </div>
 
                 <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+                    <div style="margin-bottom: 8px;">
+                        <a href="{{ url_for('ia_marks_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="width: 100%; font-size: 13px; padding: 7px 12px; display: flex; justify-content: center; align-items: center; gap: 6px; text-decoration: none;">
+                            <i class="fas fa-award" style="color: #ea580c;"></i> IA Marks & PPT Import
+                        </a>
+                    </div>
                     {% if active_session and active_session['subject_id'] == subject['subject_code'] %}
                     <div style="display: flex; gap: 8px;">
                         <a href="{{ url_for('practical_session', subject_code=subject['subject_code']) }}" class="btn btn-primary" style="flex: 1; font-size: 13px; padding: 9px 12px; display: flex; justify-content: center; align-items: center; gap: 6px; background: #4f46e5; border-color: #4f46e5;">

@@ -49,6 +49,9 @@
             <li>
                 <a href="{{ url_for('practical_sessions_history') }}"><i class="fas fa-flask"></i> Practical Sessions</a>
             </li>
+            <li>
+                <a href="{{ url_for('admin_marks') }}"><i class="fas fa-graduation-cap"></i> Academic Marks</a>
+            </li>
         </ul>
 
         <div class="sidebar-footer">
@@ -210,6 +213,17 @@
                 <div class="action-tile-text">
                     <h4>Practical Sessions Log</h4>
                     <p>Monitor laboratory sessions & evaluations across all teachers</p>
+                </div>
+                <i class="fas fa-chevron-right action-tile-arrow"></i>
+            </a>
+
+            <a href="{{ url_for('admin_marks') }}" class="action-tile">
+                <div class="action-tile-icon icon-pink" style="background: #fdf2f8;">
+                    <i class="fas fa-award" style="color: #db2777;"></i>
+                </div>
+                <div class="action-tile-text">
+                    <h4>Academic Marks Roster</h4>
+                    <p>Class-wide IA1, IA2, and continuous evaluation monitoring</p>
                 </div>
                 <i class="fas fa-chevron-right action-tile-arrow"></i>
             </a>

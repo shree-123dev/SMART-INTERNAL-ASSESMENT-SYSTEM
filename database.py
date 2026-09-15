@@ -171,7 +171,7 @@ def init_db():
     );
     """)
 
-    # 9. INTERNAL_MARKS TABLE (Cumulative Course Summary)
+    # 9. INTERNAL_MARKS TABLE (Day 9: Cumulative Course Internal Assessment & Continuous Evaluation)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS internal_marks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -183,10 +183,30 @@ def init_db():
         seminar REAL DEFAULT 0,
         viva REAL DEFAULT 0,
         practical REAL DEFAULT 0,
+        max_ia1 REAL DEFAULT 20,
+        max_ia2 REAL DEFAULT 20,
+        teacher_id TEXT,
+        updated_at TEXT,
         FOREIGN KEY (student_id) REFERENCES students(usn) ON DELETE CASCADE,
-        FOREIGN KEY (subject_id) REFERENCES subjects(subject_code) ON DELETE CASCADE
+        FOREIGN KEY (subject_id) REFERENCES subjects(subject_code) ON DELETE CASCADE,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id) ON DELETE SET NULL
     );
     """)
+
+    # Seamless migration for existing internal_marks table if columns missing
+    cursor.execute("PRAGMA table_info(internal_marks);")
+    im_columns = [row[1] for row in cursor.fetchall()]
+    if "max_ia1" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN max_ia1 REAL DEFAULT 20;")
+    if "max_ia2" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN max_ia2 REAL DEFAULT 20;")
+    if "teacher_id" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN teacher_id TEXT;")
+    if "updated_at" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN updated_at TEXT;")
+
+    # Unique index on (student_id, subject_id) for internal_marks
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_internal_marks_student_subject ON internal_marks(student_id, subject_id);")
 
     conn.commit()
 

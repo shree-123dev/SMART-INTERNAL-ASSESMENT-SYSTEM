@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual IA Marks Entry | {{ subject['subject_code'] }} | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .manual-entry-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 30px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 30px;
+        }
+
+        .mark-input {
+            width: 100px;
+            padding: 8px 12px;
+            font-size: 15px;
+            font-weight: 700;
+            text-align: center;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg-main);
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+
+        .mark-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+            outline: none;
+        }
+    </style>
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 1200px; margin: 30px auto; padding: 0 24px;">
+
+        <!-- Top Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ url_for('ia_marks_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-arrow-left"></i> Back to Gradebook
+                </a>
+                <a href="{{ url_for('teacher') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-chalkboard-teacher"></i> Faculty Hub
+                </a>
+            </div>
+            <button class="theme-toggle-btn" title="Toggle Dark/Light Theme" type="button">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <!-- Alert Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div style="background: {% if category == 'error' %}#fef2f2{% elif category == 'success' %}#ecfdf5{% else %}#eff6ff{% endif %}; border: 1px solid {% if category == 'error' %}#fecaca{% elif category == 'success' %}#a7f3d0{% else %}#bfdbfe{% endif %}; color: {% if category == 'error' %}#dc2626{% elif category == 'success' %}#059669{% else %}#1d4ed8{% endif %}; padding: 14px 20px; border-radius: var(--radius-md); font-size: 14px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}" style="font-size: 18px;"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Header Card -->
+        <div class="manual-entry-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+                <div>
+                    <span class="badge badge-primary" style="margin-bottom: 8px; font-size: 12px;">MANUAL EVALUATION ENTRY</span>
+                    <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0;">
+                        {{ subject['subject_name'] }} ({{ subject['subject_code'] }})
+                    </h1>
+                    <p style="color: var(--text-muted); font-size: 14px; margin: 0;">
+                        Enter or adjust individual student Internal Assessment marks (Max 20 marks each).
+                    </p>
+                </div>
+
+                <!-- IA Type Selector Tabs -->
+                <div style="display: flex; background: var(--bg-main); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                    <a href="{{ url_for('ia_marks_manual', subject_code=subject['subject_code'], ia_type='IA1') }}" class="btn {% if ia_type == 'IA1' %}btn-primary{% else %}btn-outline{% endif %}" style="font-size: 13px; padding: 6px 18px; border: none;">
+                        Internal Assessment 1 (IA-1)
+                    </a>
+                    <a href="{{ url_for('ia_marks_manual', subject_code=subject['subject_code'], ia_type='IA2') }}" class="btn {% if ia_type == 'IA2' %}btn-primary{% else %}btn-outline{% endif %}" style="font-size: 13px; padding: 6px 18px; border: none;">
+                        Internal Assessment 2 (IA-2)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Marks Table Form -->
+            <form action="{{ url_for('save_manual_ia_marks', subject_code=subject['subject_code']) }}" method="POST">
+                <input type="hidden" name="ia_type" value="{{ ia_type }}">
+
+                <div style="overflow-x: auto; margin-bottom: 24px;">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                                <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">USN</th>
+                                <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Student Full Name</th>
+                                <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Section</th>
+                                <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Current Saved Mark</th>
+                                <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">{{ ia_type }} Mark (/20)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if students %}
+                                {% for st in students %}
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 14px 20px;">
+                                        <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                                            {{ st['usn'] }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 20px; font-weight: 600; color: var(--text-main);">
+                                        {{ st['fullname'] }}
+                                    </td>
+                                    <td style="padding: 14px 20px; text-align: center; font-size: 13px; color: var(--text-muted);">
+                                        {{ st['section'] }}
+                                    </td>
+                                    <td style="padding: 14px 20px; text-align: center; font-weight: 600; color: var(--text-muted);">
+                                        {% if ia_type == 'IA1' %}
+                                            {{ st['ia1'] if st['ia1'] is not none else 'Not Entered' }}
+                                        {% else %}
+                                            {{ st['ia2'] if st['ia2'] is not none else 'Not Entered' }}
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 14px 20px; text-align: center;">
+                                        <input
+                                            type="number"
+                                            step="0.5"
+                                            min="0"
+                                            max="20"
+                                            name="mark_{{ st['usn'] }}"
+                                            value="{% if ia_type == 'IA1' and st['ia1'] is not none %}{{ st['ia1'] }}{% elif ia_type == 'IA2' and st['ia2'] is not none %}{{ st['ia2'] }}{% endif %}"
+                                            placeholder="0 - 20"
+                                            class="mark-input">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
+                                        No students found in this course cohort.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <a href="{{ url_for('ia_marks_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-save"></i> Save {{ ia_type }} Marks
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

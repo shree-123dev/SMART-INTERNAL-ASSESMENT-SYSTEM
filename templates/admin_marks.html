@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Marks Roster | Admin Console | SIAMS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body style="background: var(--bg-main);">
+
+    <div style="max-width: 1360px; margin: 30px auto; padding: 0 24px;">
+
+        <!-- Top Header Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; background: var(--card-bg); padding: 24px 30px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: #fdf2f8; color: #db2777; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 style="font-size: 24px; font-weight: 800; color: var(--text-main); margin: 0;">Institutional Marks & CIE Roster</h1>
+                    <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Class-wide continuous assessment overview across departments</p>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <a href="{{ url_for('admin') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-arrow-left"></i> Admin Hub
+                </a>
+                <a href="{{ url_for('practical_sessions_history') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fas fa-flask"></i> Sessions Log
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div style="background: var(--card-bg); padding: 20px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); margin-bottom: 24px;">
+            <form method="GET" action="{{ url_for('admin_marks') }}" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                        Select Course / Subject
+                    </label>
+                    <select name="subject" class="form-control" style="width: 100%; padding: 10px 14px;" onchange="this.form.submit()">
+                        <option value="">-- All Available Subjects --</option>
+                        {% for s in all_subjects %}
+                        <option value="{{ s['subject_code'] }}" {% if selected_subject == s['subject_code'] %}selected{% endif %}>
+                            {{ s['subject_code'] }} — {{ s['subject_name'] }} ({{ s['department'] }}, Sem {{ s['semester'] }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn btn-primary" style="padding: 10px 20px; font-weight: 700;">
+                        <i class="fas fa-filter"></i> Apply Filter
+                    </button>
+                    {% if selected_subject %}
+                    <a href="{{ url_for('admin_marks') }}" class="btn btn-outline" style="margin-left: 8px;">Reset</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Gradebook Table -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 30px;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                        <i class="fas fa-table" style="color: var(--primary); margin-right: 6px;"></i> Student Assessment Records
+                    </h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">
+                        {% if selected_subject %}Showing evaluations for <strong>{{ selected_subject }}</strong>{% else %}Showing records across all curriculum courses{% endif %}
+                    </p>
+                </div>
+                <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px;">
+                    Total Records: {{ marks_records|length }}
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">USN</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Student Name</th>
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-1 (/20)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-2 (/20)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA Avg (/20)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical Avg (/10)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/5)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total CIE (/35)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if marks_records %}
+                            {% for r in marks_records %}
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 14px 20px;">
+                                    <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 13px;">
+                                        {{ r['student_id'] }}
+                                    </span>
+                                </td>
+                                <td style="padding: 14px 20px; font-weight: 600; color: var(--text-main);">
+                                    {{ r['fullname'] }}
+                                </td>
+                                <td style="padding: 14px 20px;">
+                                    <span style="font-weight: 700; font-family: monospace; color: #4f46e5;">{{ r['subject_id'] }}</span>
+                                    <div style="font-size: 12px; color: var(--text-muted);">{{ r['subject_name'] }}</div>
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #4f46e5;">
+                                    {{ r['ia1'] if r['ia1'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #d97706;">
+                                    {{ r['ia2'] if r['ia2'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #0284c7;">
+                                    {{ r['ia_avg'] if r['ia_avg'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #7c3aed;">
+                                    {{ r['practical_avg'] if r['practical_avg'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #059669;">
+                                    {{ r['assignment_avg'] if r['assignment_avg'] is not none else '—' }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 800; font-size: 15px; color: var(--text-main);">
+                                    {{ r['total_score'] if r['total_score'] is not none else '—' }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
+                                    <i class="fas fa-clipboard" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+                                    No marks records found for the selected filter.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>
