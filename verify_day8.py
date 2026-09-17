@@ -187,8 +187,8 @@ class TestDay8QRAttendanceAndMarks(unittest.TestCase):
         self.assertIsNotNone(em, "Experiment marks record must exist")
         self.assertEqual(em["practical_marks"], 8.5)
         self.assertEqual(em["assignment_marks"], 4.0)
-        self.assertEqual(em["max_practical_marks"], 10.0)
-        self.assertEqual(em["max_assignment_marks"], 5.0)
+        self.assertEqual(em["max_practical_marks"], 15.0)
+        self.assertEqual(em["max_assignment_marks"], 30.0)
         self.assertEqual(em["experiment_no"], "Experiment 3")
         self.assertEqual(em["experiment_name"], "Implement Stack using Array")
 
@@ -223,11 +223,11 @@ class TestDay8QRAttendanceAndMarks(unittest.TestCase):
         session_id = cursor.fetchone()["id"]
         conn.close()
 
-        # Practical > 10
+        # Practical > 15
         res = self.app.post("/save_session_marks", json={
             "session_id": session_id,
             "student_id": "1MS24CS001",
-            "practical_marks": "12.0",
+            "practical_marks": "18.0",
             "assignment_marks": "4.0"
         })
         self.assertFalse(res.get_json()["success"])
@@ -241,12 +241,12 @@ class TestDay8QRAttendanceAndMarks(unittest.TestCase):
         })
         self.assertFalse(res.get_json()["success"])
 
-        # Assignment > 5
+        # Assignment > 30
         res = self.app.post("/save_session_marks", json={
             "session_id": session_id,
             "student_id": "1MS24CS001",
             "practical_marks": "8.0",
-            "assignment_marks": "7.5"
+            "assignment_marks": "35.0"
         })
         self.assertFalse(res.get_json()["success"])
 

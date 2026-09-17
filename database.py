@@ -185,6 +185,9 @@ def init_db():
         practical REAL DEFAULT 0,
         max_ia1 REAL DEFAULT 20,
         max_ia2 REAL DEFAULT 20,
+        oral_marks REAL,
+        max_oral_marks REAL DEFAULT 25,
+        oral_recorded_date TEXT,
         teacher_id TEXT,
         updated_at TEXT,
         FOREIGN KEY (student_id) REFERENCES students(usn) ON DELETE CASCADE,
@@ -200,6 +203,12 @@ def init_db():
         cursor.execute("ALTER TABLE internal_marks ADD COLUMN max_ia1 REAL DEFAULT 20;")
     if "max_ia2" not in im_columns:
         cursor.execute("ALTER TABLE internal_marks ADD COLUMN max_ia2 REAL DEFAULT 20;")
+    if "oral_marks" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN oral_marks REAL;")
+    if "max_oral_marks" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN max_oral_marks REAL DEFAULT 25;")
+    if "oral_recorded_date" not in im_columns:
+        cursor.execute("ALTER TABLE internal_marks ADD COLUMN oral_recorded_date TEXT;")
     if "teacher_id" not in im_columns:
         cursor.execute("ALTER TABLE internal_marks ADD COLUMN teacher_id TEXT;")
     if "updated_at" not in im_columns:

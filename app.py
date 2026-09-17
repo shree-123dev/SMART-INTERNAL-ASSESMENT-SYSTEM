@@ -11,6 +11,29 @@ from werkzeug.utils import secure_filename
 from database import init_db, get_db_connection
 from generate_qr import generate_student_qr, ensure_student_qr
 from ppt_importer import parse_pptx_ia_marks
+from config import (
+    MIN_ATTENDANCE_PERCENTAGE,
+    MAX_IA1_MARKS,
+    MIN_PASS_IA1,
+    MAX_IA2_MARKS,
+    MIN_PASS_IA2,
+    MIN_PASS_COMBINED_IA,
+    MAX_PRACTICAL_MARKS,
+    MIN_PASS_PRACTICAL,
+    MAX_ASSIGNMENT_MARKS,
+    MIN_PASS_ASSIGNMENT,
+    MAX_ORAL_MARKS,
+    MIN_PASS_ORAL,
+    TOTAL_CIE_MAX
+)
+from cie_calculator import (
+    calculate_required_labs,
+    get_student_subject_attendance,
+    get_student_subject_marks,
+    get_student_subject_complete_summary,
+    get_class_attendance_summary,
+    get_class_complete_summary
+)
 
 app = Flask(__name__)
 app.secret_key = "siams_secret_key_2026"
@@ -199,6 +222,7 @@ def student():
 
     experiment_evaluations = []
     ia_scores = []
+    attendance_list = []
 
     # Automatically ensure QR code exists for this student & fetch live marks
     if student_data:
@@ -227,49 +251,60 @@ def student():
         """, (usn,))
         experiment_evaluations = cursor.fetchall()
 
-        # Live fetch continuous internal assessment (IA) marks for all courses in student's department/semester (Day 9)
+        # Live fetch assessment marks & passing evaluations (IA1, IA2, Practical, Assignment, Oral Viva)
         cursor.execute("""
-            SELECT s.subject_code, s.subject_name,
-                   im.ia1, im.ia2, im.max_ia1, im.max_ia2
-            FROM subjects s
-            LEFT JOIN internal_marks im ON s.subject_code = im.subject_id AND im.student_id = ?
-            WHERE s.department = ? AND s.semester = ?
-            ORDER BY s.subject_code ASC
-        """, (usn, student_data["department"], student_data["semester"]))
-        raw_ia_records = cursor.fetchall()
+            SELECT subject_code, subject_name
+            FROM subjects
+            WHERE department = ? AND semester = ?
+            ORDER BY subject_code ASC
+        """, (student_data["department"], student_data["semester"]))
+        student_subjects = cursor.fetchall()
 
-        for r in raw_ia_records:
-            sub_code = r["subject_code"]
-            ia1_val = r["ia1"]
-            ia2_val = r["ia2"]
-
-            # Calculate IA Average (/20)
-            valid_ias = [float(x) for x in [ia1_val, ia2_val] if x is not None and str(x) != ""]
-            ia_avg = round(sum(valid_ias) / len(valid_ias), 2) if valid_ias else None
-
-            # Fetch Practical and Assignment averages from experiment_marks (Day 8)
-            cursor.execute("""
-                SELECT AVG(practical_marks) as avg_p, AVG(assignment_marks) as avg_a
-                FROM experiment_marks
-                WHERE student_id = ? AND subject_id = ?
-            """, (usn, sub_code))
-            exp_stats = cursor.fetchone()
-            prac_avg = round(exp_stats["avg_p"], 2) if exp_stats and exp_stats["avg_p"] is not None else None
-            assign_avg = round(exp_stats["avg_a"], 2) if exp_stats and exp_stats["avg_a"] is not None else None
-
-            # Calculate total continuous evaluation score (/35)
-            total_parts = [p for p in [ia_avg, prac_avg, assign_avg] if p is not None]
-            total_score = round(sum(total_parts), 2) if total_parts else None
-
+        for s in student_subjects:
+            sub_code = s["subject_code"]
+            m_info = get_student_subject_marks(usn, sub_code, conn=conn)
             ia_scores.append({
                 "subject_code": sub_code,
-                "subject_name": r["subject_name"],
-                "ia1": ia1_val,
-                "ia2": ia2_val,
-                "ia_avg": ia_avg,
-                "practical_avg": prac_avg,
-                "assignment_avg": assign_avg,
-                "total_score": total_score
+                "subject_name": s["subject_name"],
+                "ia1": m_info["ia1"],
+                "ia2": m_info["ia2"],
+                "ia_avg": m_info["ia_avg"],
+                "combined_ia_score": m_info["combined_ia_score"],
+                "is_ia1_pass": m_info["is_ia1_pass"],
+                "is_ia2_pass": m_info["is_ia2_pass"],
+                "is_combined_ia_pass": m_info["is_combined_ia_pass"],
+                "practical_avg": m_info["practical_avg"],
+                "is_practical_pass": m_info["is_practical_pass"],
+                "assignment_avg": m_info["assignment_avg"],
+                "is_assignment_pass": m_info["is_assignment_pass"],
+                "oral_marks": m_info["oral_marks"],
+                "is_oral_pass": m_info["is_oral_pass"],
+                "total_score": m_info["total_cie"],
+                "overall_status": m_info["overall_status"]
+            })
+
+        # Calculate subject/lab-wise attendance & 75% eligibility (Day 10)
+        attendance_list = []
+        cursor.execute("""
+            SELECT subject_code, subject_name
+            FROM subjects
+            WHERE department = ? AND semester = ?
+            ORDER BY subject_code ASC
+        """, (student_data["department"], student_data["semester"]))
+        student_subjects = cursor.fetchall()
+        for sub in student_subjects:
+            att_info = get_student_subject_attendance(usn, sub["subject_code"], conn=conn)
+            attendance_list.append({
+                "subject_code": sub["subject_code"],
+                "subject_name": sub["subject_name"],
+                "total_sessions": att_info["total_sessions"],
+                "present_sessions": att_info["present_sessions"],
+                "absent_sessions": att_info["absent_sessions"],
+                "attendance_percentage": att_info["attendance_percentage"],
+                "status": att_info["status"],
+                "is_eligible": att_info["is_eligible"],
+                "additional_labs_required": att_info["additional_labs_required"],
+                "projected_attendance": att_info["projected_attendance"]
             })
 
     conn.close()
@@ -279,6 +314,8 @@ def student():
         student=student_data,
         evaluations=experiment_evaluations,
         ia_scores=ia_scores,
+        attendance_list=attendance_list,
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
         fullname=session.get("fullname", (student_data["fullname"] if student_data else "Student"))
     )
 
@@ -1787,11 +1824,11 @@ def save_session_marks():
         return jsonify({"success": False, "error": "Invalid marks entered. Marks must be valid numeric values."}), 400
 
     # Range validations
-    if practical_marks < 0 or practical_marks > 10:
-        return jsonify({"success": False, "error": "Practical experiment marks must be between 0 and 10."}), 400
+    if practical_marks < 0 or practical_marks > MAX_PRACTICAL_MARKS:
+        return jsonify({"success": False, "error": f"Practical experiment marks must be between 0 and {int(MAX_PRACTICAL_MARKS)}."}), 400
 
-    if assignment_marks < 0 or assignment_marks > 5:
-        return jsonify({"success": False, "error": "Assignment marks must be between 0 and 5."}), 400
+    if assignment_marks < 0 or assignment_marks > MAX_ASSIGNMENT_MARKS:
+        return jsonify({"success": False, "error": f"Assignment marks must be between 0 and {int(MAX_ASSIGNMENT_MARKS)}."}), 400
 
     email = session.get("email")
     conn = get_db_connection()
@@ -1858,9 +1895,10 @@ def save_session_marks():
         if existing_em:
             cursor.execute("""
                 UPDATE experiment_marks
-                SET practical_marks = ?, assignment_marks = ?, recorded_date = ?
+                SET practical_marks = ?, assignment_marks = ?,
+                    max_practical_marks = ?, max_assignment_marks = ?, recorded_date = ?
                 WHERE id = ?
-            """, (practical_marks, assignment_marks, today_str, existing_em["id"]))
+            """, (practical_marks, assignment_marks, MAX_PRACTICAL_MARKS, MAX_ASSIGNMENT_MARKS, today_str, existing_em["id"]))
         else:
             cursor.execute("""
                 INSERT INTO experiment_marks (
@@ -1870,11 +1908,12 @@ def save_session_marks():
                     max_practical_marks, max_assignment_marks,
                     recorded_date
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 10, 5, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 session_id, student_id, sess["subject_id"], teacher_id,
                 sess["experiment_no"], sess["experiment_name"],
                 practical_marks, assignment_marks,
+                MAX_PRACTICAL_MARKS, MAX_ASSIGNMENT_MARKS,
                 today_str
             ))
         conn.commit()
@@ -2428,6 +2467,154 @@ def cancel_ppt_import(subject_code):
     return redirect(url_for("ia_marks_subject", subject_code=subject_code))
 
 
+# ---------------- TEACHER ORAL / VIVA MARKS MANAGEMENT ----------------
+@app.route("/oral_marks/<subject_code>")
+@role_required("teacher")
+def oral_marks_subject(subject_code):
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE email = ?", (email,))
+    teacher_data = cursor.fetchone()
+
+    if not teacher_data:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    # Security check: verify this teacher is assigned to this subject
+    cursor.execute("""
+        SELECT * FROM teacher_subjects
+        WHERE teacher_id = ? AND subject_id = ?
+    """, (teacher_data["teacher_id"], subject_code))
+    is_assigned = cursor.fetchone()
+
+    if not is_assigned:
+        conn.close()
+        flash(f"Access Denied: You are not assigned to course subject {subject_code}.", "error")
+        return redirect(url_for("teacher"))
+
+    # Fetch subject details
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    # Fetch all students matching department and semester
+    cursor.execute("""
+        SELECT usn, fullname, department, semester, section
+        FROM students
+        WHERE department = ? AND semester = ?
+        ORDER BY usn ASC
+    """, (subject["department"], subject["semester"]))
+    students = cursor.fetchall()
+
+    students_list = []
+    for st in students:
+        usn = st["usn"]
+        marks_info = get_student_subject_marks(usn, subject_code, conn=conn)
+        students_list.append({
+            "usn": usn,
+            "fullname": st["fullname"],
+            "department": st["department"],
+            "semester": st["semester"],
+            "section": st["section"],
+            "oral_marks": marks_info["oral_marks"],
+            "is_oral_pass": marks_info["is_oral_pass"],
+            "oral_recorded_date": marks_info["oral_recorded_date"]
+        })
+
+    conn.close()
+
+    return render_template(
+        "oral_marks.html",
+        teacher=teacher_data,
+        subject=subject,
+        subject_code=subject_code,
+        students_list=students_list,
+        max_oral=MAX_ORAL_MARKS,
+        min_pass_oral=MIN_PASS_ORAL,
+        fullname=session.get("fullname", teacher_data["fullname"])
+    )
+
+
+@app.route("/oral_marks/save/<subject_code>", methods=["POST"])
+@role_required("teacher")
+def save_oral_marks(subject_code):
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE email = ?", (email,))
+    teacher_data = cursor.fetchone()
+
+    if not teacher_data:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    # Security check: verify assignment
+    cursor.execute("""
+        SELECT * FROM teacher_subjects
+        WHERE teacher_id = ? AND subject_id = ?
+    """, (teacher_data["teacher_id"], subject_code))
+    if not cursor.fetchone():
+        conn.close()
+        flash(f"Access Denied: You are not assigned to course subject {subject_code}.", "error")
+        return redirect(url_for("teacher"))
+
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT usn FROM students
+        WHERE department = ? AND semester = ?
+    """, (subject["department"], subject["semester"]))
+    students = cursor.fetchall()
+
+    today_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    saved_count = 0
+    error_count = 0
+
+    for st in students:
+        usn = st["usn"]
+        form_key = f"oral_{usn}"
+        raw_val = request.form.get(form_key, "").strip()
+
+        if raw_val == "":
+            continue
+
+        try:
+            oral_num = float(raw_val)
+            if oral_num < 0 or oral_num > MAX_ORAL_MARKS:
+                error_count += 1
+                continue
+
+            # Update or insert into internal_marks
+            cursor.execute("""
+                INSERT INTO internal_marks (student_id, subject_id, oral_marks, max_oral_marks, oral_recorded_date, teacher_id, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(student_id, subject_id) DO UPDATE SET
+                    oral_marks = excluded.oral_marks,
+                    max_oral_marks = excluded.max_oral_marks,
+                    oral_recorded_date = excluded.oral_recorded_date,
+                    teacher_id = excluded.teacher_id,
+                    updated_at = excluded.updated_at
+            """, (usn, subject_code, oral_num, MAX_ORAL_MARKS, today_str, teacher_data["teacher_id"], today_str))
+            saved_count += 1
+        except ValueError:
+            error_count += 1
+
+    conn.commit()
+    conn.close()
+
+    if error_count > 0:
+        flash(f"Saved {saved_count} Oral examination marks. {error_count} marks were out of range (0-{MAX_ORAL_MARKS}) and skipped.", "warning")
+    else:
+        flash(f"Successfully saved Oral examination marks for {saved_count} students!", "success")
+
+    return redirect(url_for("oral_marks_subject", subject_code=subject_code))
+
+
 # ---------------- ADMIN INSTITUTIONAL MARKS ROSTER ----------------
 @app.route("/admin/marks")
 @role_required("admin")
@@ -2503,6 +2690,300 @@ def admin_marks():
         all_subjects=all_subjects,
         selected_subject=selected_subject,
         marks_records=marks_records
+    )
+
+
+# ---------------- TEACHER SUBJECT ATTENDANCE (DAY 10) ----------------
+@app.route("/teacher/attendance")
+@role_required("teacher")
+def teacher_attendance():
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE email = ?", (email,))
+    teacher_data = cursor.fetchone()
+
+    if not teacher_data:
+        conn.close()
+        flash("Faculty profile not found. Please log in again.", "error")
+        return redirect(url_for("teacher"))
+
+    cursor.execute("""
+        SELECT s.subject_code, s.subject_name, s.department, s.semester
+        FROM teacher_subjects ts
+        JOIN subjects s ON ts.subject_id = s.subject_code
+        WHERE ts.teacher_id = ?
+        ORDER BY s.subject_code ASC
+    """, (teacher_data["teacher_id"],))
+    assigned_subjects = cursor.fetchall()
+    conn.close()
+
+    if assigned_subjects:
+        return redirect(url_for("teacher_attendance_subject", subject_code=assigned_subjects[0]["subject_code"]))
+
+    return render_template(
+        "teacher_attendance.html",
+        teacher=teacher_data,
+        assigned_subjects=[],
+        subject_code=None,
+        subject=None,
+        attendance_records=[],
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
+        fullname=session.get("fullname", teacher_data["fullname"])
+    )
+
+
+@app.route("/teacher/attendance/<subject_code>")
+@role_required("teacher")
+def teacher_attendance_subject(subject_code):
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE email = ?", (email,))
+    teacher_data = cursor.fetchone()
+
+    if not teacher_data:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    # Security check: verify this teacher is assigned to this subject
+    cursor.execute("""
+        SELECT * FROM teacher_subjects
+        WHERE teacher_id = ? AND subject_id = ?
+    """, (teacher_data["teacher_id"], subject_code))
+    is_assigned = cursor.fetchone()
+
+    if not is_assigned:
+        conn.close()
+        flash(f"Access Denied: You are not assigned to course subject {subject_code}.", "error")
+        return redirect(url_for("teacher_attendance"))
+
+    # Fetch subject details
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    # Fetch all assigned subjects for switcher
+    cursor.execute("""
+        SELECT s.subject_code, s.subject_name, s.department, s.semester
+        FROM teacher_subjects ts
+        JOIN subjects s ON ts.subject_id = s.subject_code
+        WHERE ts.teacher_id = ?
+        ORDER BY s.subject_code ASC
+    """, (teacher_data["teacher_id"],))
+    assigned_subjects = cursor.fetchall()
+
+    attendance_records = get_class_attendance_summary(subject_code, conn=conn)
+    conn.close()
+
+    return render_template(
+        "teacher_attendance.html",
+        teacher=teacher_data,
+        assigned_subjects=assigned_subjects,
+        subject_code=subject_code,
+        subject=subject,
+        subject_name=subject["subject_name"] if subject else subject_code,
+        department=subject["department"] if subject else "",
+        semester=subject["semester"] if subject else "",
+        attendance_records=attendance_records,
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
+        fullname=session.get("fullname", teacher_data["fullname"])
+    )
+
+
+# ---------------- TEACHER CLASS CIE SUMMARY (DAY 10) ----------------
+@app.route("/teacher/summary")
+@role_required("teacher")
+def teacher_summary():
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE email = ?", (email,))
+    teacher_data = cursor.fetchone()
+
+    if not teacher_data:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    cursor.execute("""
+        SELECT s.subject_code, s.subject_name, s.department, s.semester
+        FROM teacher_subjects ts
+        JOIN subjects s ON ts.subject_id = s.subject_code
+        WHERE ts.teacher_id = ?
+        ORDER BY s.subject_code ASC
+    """, (teacher_data["teacher_id"],))
+    assigned_subjects = cursor.fetchall()
+    conn.close()
+
+    if assigned_subjects:
+        return redirect(url_for("teacher_summary_subject", subject_code=assigned_subjects[0]["subject_code"]))
+
+    return render_template(
+        "teacher_summary.html",
+        teacher=teacher_data,
+        assigned_subjects=[],
+        subject_code=None,
+        subject=None,
+        subject_name="",
+        department="",
+        semester="",
+        summary_records=[],
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
+        max_ia1=MAX_IA1_MARKS,
+        max_ia2=MAX_IA2_MARKS,
+        max_practical=MAX_PRACTICAL_MARKS,
+        max_assignment=MAX_ASSIGNMENT_MARKS,
+        total_cie_max=TOTAL_CIE_MAX,
+        fullname=session.get("fullname", teacher_data["fullname"])
+    )
+
+
+@app.route("/teacher/summary/<subject_code>")
+@role_required("teacher")
+def teacher_summary_subject(subject_code):
+    email = session.get("email")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM teachers WHERE email = ?", (email,))
+    teacher_data = cursor.fetchone()
+
+    if not teacher_data:
+        conn.close()
+        flash("Faculty profile not found.", "error")
+        return redirect(url_for("teacher"))
+
+    # Security check: verify this teacher is assigned to this subject
+    cursor.execute("""
+        SELECT * FROM teacher_subjects
+        WHERE teacher_id = ? AND subject_id = ?
+    """, (teacher_data["teacher_id"], subject_code))
+    is_assigned = cursor.fetchone()
+
+    if not is_assigned:
+        conn.close()
+        flash(f"Access Denied: You are not assigned to course subject {subject_code}.", "error")
+        return redirect(url_for("teacher_summary"))
+
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects WHERE subject_code = ?", (subject_code,))
+    subject = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT s.subject_code, s.subject_name, s.department, s.semester
+        FROM teacher_subjects ts
+        JOIN subjects s ON ts.subject_id = s.subject_code
+        WHERE ts.teacher_id = ?
+        ORDER BY s.subject_code ASC
+    """, (teacher_data["teacher_id"],))
+    assigned_subjects = cursor.fetchall()
+
+    summary_records = get_class_complete_summary(subject_code, conn=conn)
+    conn.close()
+
+    return render_template(
+        "teacher_summary.html",
+        teacher=teacher_data,
+        assigned_subjects=assigned_subjects,
+        subject_code=subject_code,
+        subject=subject,
+        subject_name=subject["subject_name"] if subject else subject_code,
+        department=subject["department"] if subject else "",
+        semester=subject["semester"] if subject else "",
+        summary_records=summary_records,
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
+        max_ia1=MAX_IA1_MARKS,
+        max_ia2=MAX_IA2_MARKS,
+        max_practical=MAX_PRACTICAL_MARKS,
+        max_assignment=MAX_ASSIGNMENT_MARKS,
+        total_cie_max=TOTAL_CIE_MAX,
+        fullname=session.get("fullname", teacher_data["fullname"])
+    )
+
+
+# ---------------- ADMIN INSTITUTIONAL ATTENDANCE ROSTER (DAY 10) ----------------
+@app.route("/admin/attendance")
+@role_required("admin")
+def admin_attendance():
+    selected_subject = request.args.get("subject", "").strip().upper() or None
+    selected_dept = request.args.get("department", "").strip() or None
+    selected_sem = request.args.get("semester", "").strip() or None
+    selected_sec = request.args.get("section", "").strip() or None
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects ORDER BY subject_code ASC")
+    all_subjects = cursor.fetchall()
+
+    sem_int = int(selected_sem) if selected_sem and selected_sem.isdigit() else None
+
+    attendance_records = get_class_attendance_summary(
+        subject_code=selected_subject,
+        department=selected_dept,
+        semester=sem_int,
+        section=selected_sec,
+        conn=conn
+    )
+    conn.close()
+
+    return render_template(
+        "admin_attendance.html",
+        all_subjects=all_subjects,
+        selected_subject=selected_subject or "",
+        selected_dept=selected_dept or "",
+        selected_sem=selected_sem or "",
+        selected_sec=selected_sec or "",
+        attendance_records=attendance_records,
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
+        fullname=session.get("fullname", "Administrator")
+    )
+
+
+# ---------------- ADMIN INSTITUTIONAL CIE MASTER SUMMARY (DAY 10) ----------------
+@app.route("/admin/summary")
+@role_required("admin")
+def admin_summary():
+    selected_subject = request.args.get("subject", "").strip().upper() or None
+    selected_dept = request.args.get("department", "").strip() or None
+    selected_sem = request.args.get("semester", "").strip() or None
+    selected_sec = request.args.get("section", "").strip() or None
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT subject_code, subject_name, department, semester FROM subjects ORDER BY subject_code ASC")
+    all_subjects = cursor.fetchall()
+
+    sem_int = int(selected_sem) if selected_sem and selected_sem.isdigit() else None
+
+    summary_records = get_class_complete_summary(
+        subject_code=selected_subject,
+        department=selected_dept,
+        semester=sem_int,
+        section=selected_sec,
+        conn=conn
+    )
+    conn.close()
+
+    return render_template(
+        "admin_summary.html",
+        all_subjects=all_subjects,
+        selected_subject=selected_subject or "",
+        selected_dept=selected_dept or "",
+        selected_sem=selected_sem or "",
+        selected_sec=selected_sec or "",
+        summary_records=summary_records,
+        min_attendance_pct=MIN_ATTENDANCE_PERCENTAGE,
+        max_ia1=MAX_IA1_MARKS,
+        max_ia2=MAX_IA2_MARKS,
+        max_practical=MAX_PRACTICAL_MARKS,
+        max_assignment=MAX_ASSIGNMENT_MARKS,
+        total_cie_max=TOTAL_CIE_MAX,
+        fullname=session.get("fullname", "Administrator")
     )
 
 

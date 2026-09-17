@@ -277,11 +277,11 @@
                                 type="number"
                                 step="0.5"
                                 min="0"
-                                max="10"
+                                max="15"
                                 id="practicalMarksInput"
                                 required
                                 value="0">
-                            <span class="max-label">/ 10</span>
+                            <span class="max-label">/ 15</span>
                         </div>
 
                         <div class="marks-field-group" style="margin-bottom: 0;">
@@ -292,11 +292,11 @@
                                 type="number"
                                 step="0.5"
                                 min="0"
-                                max="5"
+                                max="30"
                                 id="assignmentMarksInput"
                                 required
                                 value="0">
-                            <span class="max-label">/ 5</span>
+                            <span class="max-label">/ 30</span>
                         </div>
                     </div>
 
@@ -332,8 +332,8 @@
                             <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Full Name</th>
                             <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Department</th>
                             <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Attendance</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical (/10)</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/5)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical (/15)</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/30)</th>
                             <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Score</th>
                         </tr>
                     </thead>
@@ -356,14 +356,14 @@
                                     <span class="badge badge-success" style="font-size: 12px;">Present ✓</span>
                                 </td>
                                 <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #4f46e5;">
-                                    {{ st['practical_marks'] if st['practical_marks'] is not none else '—' }} / 10
+                                    {{ st['practical_marks'] if st['practical_marks'] is not none else '—' }} / 15
                                 </td>
                                 <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #0284c7;">
-                                    {{ st['assignment_marks'] if st['assignment_marks'] is not none else '—' }} / 5
+                                    {{ st['assignment_marks'] if st['assignment_marks'] is not none else '—' }} / 30
                                 </td>
                                 <td style="padding: 12px 20px; text-align: center; font-weight: 800; color: var(--text-main);">
                                     {% if st['practical_marks'] is not none and st['assignment_marks'] is not none %}
-                                        {{ st['practical_marks'] + st['assignment_marks'] }} / 15
+                                        {{ st['practical_marks'] + st['assignment_marks'] }} / 45
                                     {% else %}
                                         —
                                     {% endif %}
@@ -595,9 +595,9 @@
 
             existingRows.forEach(row => {
                 if (row.innerText.includes(usn)) {
-                    row.children[4].innerText = `${pracMarks} / 10`;
-                    row.children[5].innerText = `${assignMarks} / 5`;
-                    row.children[6].innerText = `${totalScore} / 15`;
+                    row.children[4].innerText = `${pracMarks} / 15`;
+                    row.children[5].innerText = `${assignMarks} / 30`;
+                    row.children[6].innerText = `${totalScore} / 45`;
                     updated = true;
                 }
             });
@@ -616,9 +616,9 @@
                     <td style="padding: 12px 20px; text-align: center;">
                         <span class="badge badge-success" style="font-size: 12px;">Present ✓</span>
                     </td>
-                    <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #4f46e5;">${pracMarks} / 10</td>
-                    <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #0284c7;">${assignMarks} / 5</td>
-                    <td style="padding: 12px 20px; text-align: center; font-weight: 800; color: var(--text-main);">${totalScore} / 15</td>
+                    <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #4f46e5;">${pracMarks} / 15</td>
+                    <td style="padding: 12px 20px; text-align: center; font-weight: 700; color: #0284c7;">${assignMarks} / 30</td>
+                    <td style="padding: 12px 20px; text-align: center; font-weight: 800; color: var(--text-main);">${totalScore} / 45</td>
                 `;
                 tbody.prepend(tr);
             }

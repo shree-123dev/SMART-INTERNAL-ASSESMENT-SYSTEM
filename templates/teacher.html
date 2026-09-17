@@ -75,6 +75,12 @@
                 <a href="{{ url_for('teacher_ia_hub') }}"><i class="fas fa-award"></i> IA Marks & Gradebook</a>
             </li>
             <li>
+                <a href="{{ url_for('teacher_attendance') }}"><i class="fas fa-clipboard-check"></i> Subject Attendance</a>
+            </li>
+            <li>
+                <a href="{{ url_for('teacher_summary') }}"><i class="fas fa-calculator"></i> Class CIE Summary</a>
+            </li>
+            <li>
                 <a href="{{ url_for('practical_sessions_history') }}"><i class="fas fa-flask"></i> Practical Sessions</a>
             </li>
             <li>
@@ -262,9 +268,20 @@
                 </div>
 
                 <div style="border-top: 1px solid var(--border); padding-top: 16px;">
-                    <div style="margin-bottom: 8px;">
-                        <a href="{{ url_for('ia_marks_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="width: 100%; font-size: 13px; padding: 7px 12px; display: flex; justify-content: center; align-items: center; gap: 6px; text-decoration: none;">
-                            <i class="fas fa-award" style="color: #ea580c;"></i> IA Marks & PPT Import
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <a href="{{ url_for('teacher_attendance_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="font-size: 12px; padding: 6px 8px; display: flex; justify-content: center; align-items: center; gap: 5px; text-decoration: none;">
+                            <i class="fas fa-clipboard-check" style="color: #0284c7;"></i> Attendance
+                        </a>
+                        <a href="{{ url_for('teacher_summary_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="font-size: 12px; padding: 6px 8px; display: flex; justify-content: center; align-items: center; gap: 5px; text-decoration: none;">
+                            <i class="fas fa-calculator" style="color: #8b5cf6;"></i> CIE Matrix
+                        </a>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <a href="{{ url_for('ia_marks_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="font-size: 12px; padding: 7px 8px; display: flex; justify-content: center; align-items: center; gap: 5px; text-decoration: none;">
+                            <i class="fas fa-award" style="color: #ea580c;"></i> IA Marks
+                        </a>
+                        <a href="{{ url_for('oral_marks_subject', subject_code=subject['subject_code']) }}" class="btn btn-outline" style="font-size: 12px; padding: 7px 8px; display: flex; justify-content: center; align-items: center; gap: 5px; text-decoration: none;">
+                            <i class="fas fa-comments" style="color: #0284c7;"></i> Oral / Viva
                         </a>
                     </div>
                     {% if active_session and active_session['subject_id'] == subject['subject_code'] %}

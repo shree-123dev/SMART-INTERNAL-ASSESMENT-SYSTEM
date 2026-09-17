@@ -203,17 +203,142 @@
 
         </div>
 
-        <!-- ================= CONTINUOUS INTERNAL ASSESSMENT (IA) MARKS SECTION ================= -->
-        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-top: 24px;">
+        <!-- ================= SUBJECT / LAB-WISE ATTENDANCE & 75% ELIGIBILITY GUIDANCE SECTION ================= -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-top: 24px;" id="attendance">
             <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
                     <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
-                        <i class="fas fa-award" style="color: #ea580c; margin-right: 8px;"></i> Continuous Internal Assessment (CIE) Marks
+                        <i class="fas fa-user-check" style="color: var(--primary); margin-right: 8px;"></i> My Subject / Lab Attendance &amp; 75% Eligibility
                     </h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">Official IA-1, IA-2, and cumulative assessment performance</p>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">Subject-wise lab attendance and consecutive session recovery guidance</p>
                 </div>
-                <span class="badge badge-info" style="font-size: 12px; padding: 6px 12px;">
-                    Scale: IA=20, Lab=10, Assignment=5
+                <span class="badge badge-primary" style="font-size: 12px; padding: 6px 12px;">
+                    Policy: {{ min_attendance_pct }}% Minimum Requirement
+                </span>
+            </div>
+
+            <!-- Attendance Guidance Alert Cards -->
+            <div style="padding: 18px 24px 6px 24px;">
+                {% if attendance_list %}
+                    {% for a in attendance_list %}
+                        {% if a['status'] == 'NOT ELIGIBLE' %}
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; padding: 12px 18px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px;">
+                            <i class="fas fa-exclamation-triangle" style="color: #d97706; font-size: 18px; margin-top: 2px;"></i>
+                            <div style="font-size: 13px; color: #92400e;">
+                                <strong>{{ a['subject_name'] }} ({{ a['subject_code'] }}):</strong> Current attendance is <strong>{{ a['attendance_percentage'] }}%</strong> ({{ a['present_sessions'] }}/{{ a['total_sessions'] }} labs).
+                                You must attend the next <strong>{{ a['additional_labs_required'] }} labs consecutively</strong> to reach {{ min_attendance_pct }}% attendance.
+                                <span style="display: block; margin-top: 3px; font-size: 12px; color: #b45309;">
+                                    Projected Recovery: {{ a['present_sessions'] + a['additional_labs_required'] }}/{{ a['total_sessions'] + a['additional_labs_required'] }} = <strong>{{ a['projected_attendance'] }}%</strong>
+                                </span>
+                            </div>
+                        </div>
+                        {% elif a['status'] == 'ELIGIBLE' %}
+                        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; padding: 10px 18px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                            <i class="fas fa-check-circle" style="color: #059669; font-size: 16px;"></i>
+                            <div style="font-size: 13px; color: #065f46;">
+                                <strong>{{ a['subject_name'] }} ({{ a['subject_code'] }}):</strong> Attendance is <strong>{{ a['attendance_percentage'] }}%</strong> ({{ a['present_sessions'] }}/{{ a['total_sessions'] }} labs). Attendance requirement satisfied.
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject / Lab</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Labs</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Present</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Absent</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Attendance %</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status</th>
+                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Labs Needed to Reach {{ min_attendance_pct }}%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if attendance_list %}
+                            {% for a in attendance_list %}
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 14px 20px;">
+                                    <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px;">
+                                        {{ a['subject_code'] }}
+                                    </span>
+                                    <strong style="color: var(--text-main); font-size: 13px;">{{ a['subject_name'] }}</strong>
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: var(--text-main);">
+                                    {{ a['total_sessions'] }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #059669;">
+                                    {{ a['present_sessions'] }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #dc2626;">
+                                    {{ a['absent_sessions'] }}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center;">
+                                    {% if a['attendance_percentage'] is not none %}
+                                        <strong style="color: {% if a['attendance_percentage'] >= min_attendance_pct %}#059669{% else %}#dc2626{% endif %}; font-size: 14px;">
+                                            {{ a['attendance_percentage'] }}%
+                                        </strong>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 13px;">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center;">
+                                    {% if a['status'] == 'ELIGIBLE' %}
+                                        <span class="badge badge-success" style="font-size: 12px; padding: 4px 10px;">
+                                            <i class="fas fa-check"></i> Eligible
+                                        </span>
+                                    {% elif a['status'] == 'NOT ELIGIBLE' %}
+                                        <span class="badge badge-danger" style="font-size: 12px; padding: 4px 10px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+                                            <i class="fas fa-exclamation-triangle"></i> Not Eligible
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-info" style="font-size: 12px; padding: 4px 10px;">
+                                            {{ a['status'] }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 14px 20px; text-align: center;">
+                                    {% if a['status'] == 'NOT ELIGIBLE' %}
+                                        <div style="display: inline-flex; align-items: center; gap: 6px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700;">
+                                            <i class="fas fa-running"></i> Attend next <strong>{{ a['additional_labs_required'] }}</strong> labs
+                                        </div>
+                                    {% elif a['status'] == 'ELIGIBLE' %}
+                                        <span style="color: #059669; font-weight: 700; font-size: 13px;">
+                                            <i class="fas fa-check"></i> 0 (Requirement Met)
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted); font-size: 13px;">&mdash;</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
+                                    <i class="fas fa-calendar-times" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+                                    No lab attendance records logged yet for your courses.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= CONTINUOUS INTERNAL ASSESSMENT (IA) MARKS SECTION ================= -->
+        <div class="table-card" style="background: var(--card-bg); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); margin-top: 24px;" id="marks">
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                        <i class="fas fa-award" style="color: #ea580c; margin-right: 8px;"></i> Continuous Internal Assessment (CIE) & Examination Marks
+                    </h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;">Component-wise marks, passing criteria validation, and final overall performance</p>
+                </div>
+                <span class="badge badge-info" style="font-size: 11px; padding: 6px 12px;">
+                    Scale: IA=20 (Pass: 8) • Combined IA=40 (Pass: 16) • Lab=15 (Pass: 10) • Assign=30 (Pass: 15) • Oral=25 (Pass: 15) • Max Scale: 90
                 </span>
             </div>
 
@@ -221,50 +346,120 @@
                 <table class="data-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background: var(--bg-main); border-bottom: 2px solid var(--border);">
-                            <th style="padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject Code & Name</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-1 (/20)</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-2 (/20)</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA Avg (/20)</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical Avg (/10)</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/5)</th>
-                            <th style="padding: 14px 20px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Score (/35)</th>
+                            <th style="padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Subject</th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-1 (/20)<br><small style="font-weight: 500; text-transform: none; color: #64748b;">Min Pass: 8</small></th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IA-2 (/20)<br><small style="font-weight: 500; text-transform: none; color: #64748b;">Min Pass: 8</small></th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Combined IA<br><small style="font-weight: 500; text-transform: none; color: #64748b;">Min Pass: 16</small></th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Practical (/15)<br><small style="font-weight: 500; text-transform: none; color: #64748b;">Min Pass: 10</small></th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Assignment (/30)<br><small style="font-weight: 500; text-transform: none; color: #64748b;">Min Pass: 15</small></th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Oral / Viva (/25)<br><small style="font-weight: 500; text-transform: none; color: #64748b;">Min Pass: 15</small></th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase;">Total (/90)</th>
+                            <th style="padding: 14px 16px; text-align: center; font-size: 12px; font-weight: 800; color: var(--text-main); text-transform: uppercase;">Overall Result</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if ia_scores %}
                             {% for score in ia_scores %}
                             <tr style="border-bottom: 1px solid var(--border);">
-                                <td style="padding: 14px 20px;">
+                                <td style="padding: 14px 16px;">
                                     <span style="font-weight: 700; font-family: monospace; color: var(--primary); background: #eef2ff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px;">
                                         {{ score['subject_code'] }}
                                     </span>
-                                    <strong style="color: var(--text-main); font-size: 13px;">{{ score['subject_name'] }}</strong>
+                                    <div style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-top: 3px;">{{ score['subject_name'] }}</div>
                                 </td>
-                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #4f46e5;">
-                                    {{ score['ia1'] if score['ia1'] is not none else '—' }}
+                                <!-- IA-1 -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['ia1'] is not none %}
+                                        <div style="font-weight: 700; color: #4f46e5; font-size: 14px;">{{ score['ia1'] }}</div>
+                                        <span class="badge {% if score['is_ia1_pass'] %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 10px; padding: 2px 6px; margin-top: 2px;">
+                                            {% if score['is_ia1_pass'] %}Pass{% else %}Fail{% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">—</span>
+                                    {% endif %}
                                 </td>
-                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #d97706;">
-                                    {{ score['ia2'] if score['ia2'] is not none else '—' }}
+                                <!-- IA-2 -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['ia2'] is not none %}
+                                        <div style="font-weight: 700; color: #d97706; font-size: 14px;">{{ score['ia2'] }}</div>
+                                        <span class="badge {% if score['is_ia2_pass'] %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 10px; padding: 2px 6px; margin-top: 2px;">
+                                            {% if score['is_ia2_pass'] %}Pass{% else %}Fail{% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">—</span>
+                                    {% endif %}
                                 </td>
-                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #0284c7;">
-                                    {{ score['ia_avg'] if score['ia_avg'] is not none else '—' }}
+                                <!-- Combined IA -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['combined_ia_score'] is not none %}
+                                        <div style="font-weight: 700; color: #0284c7; font-size: 14px;">{{ score['combined_ia_score'] }}</div>
+                                        <span class="badge {% if score['is_combined_ia_pass'] %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 10px; padding: 2px 6px; margin-top: 2px;">
+                                            {% if score['is_combined_ia_pass'] %}Pass (≥16){% else %}Fail (<16){% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">—</span>
+                                    {% endif %}
                                 </td>
-                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #7c3aed;">
-                                    {{ score['practical_avg'] if score['practical_avg'] is not none else '—' }}
+                                <!-- Practical -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['practical_avg'] is not none %}
+                                        <div style="font-weight: 700; color: #7c3aed; font-size: 14px;">{{ score['practical_avg'] }}</div>
+                                        <span class="badge {% if score['is_practical_pass'] %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 10px; padding: 2px 6px; margin-top: 2px;">
+                                            {% if score['is_practical_pass'] %}Pass (≥10){% else %}Fail (<10){% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">—</span>
+                                    {% endif %}
                                 </td>
-                                <td style="padding: 14px 20px; text-align: center; font-weight: 700; color: #059669;">
-                                    {{ score['assignment_avg'] if score['assignment_avg'] is not none else '—' }}
+                                <!-- Assignment -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['assignment_avg'] is not none %}
+                                        <div style="font-weight: 700; color: #059669; font-size: 14px;">{{ score['assignment_avg'] }}</div>
+                                        <span class="badge {% if score['is_assignment_pass'] %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 10px; padding: 2px 6px; margin-top: 2px;">
+                                            {% if score['is_assignment_pass'] %}Pass (≥15){% else %}Fail (<15){% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">—</span>
+                                    {% endif %}
                                 </td>
-                                <td style="padding: 14px 20px; text-align: center; font-weight: 800; font-size: 15px; color: var(--text-main);">
+                                <!-- Oral / Viva -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['oral_marks'] is not none %}
+                                        <div style="font-weight: 700; color: #9333ea; font-size: 14px;">{{ score['oral_marks'] }}</div>
+                                        <span class="badge {% if score['is_oral_pass'] %}badge-success{% else %}badge-danger{% endif %}" style="font-size: 10px; padding: 2px 6px; margin-top: 2px;">
+                                            {% if score['is_oral_pass'] %}Pass (≥15){% else %}Fail (<15){% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">—</span>
+                                    {% endif %}
+                                </td>
+                                <!-- Total CIE -->
+                                <td style="padding: 14px 16px; text-align: center; font-weight: 800; font-size: 15px; color: var(--text-main);">
                                     {{ score['total_score'] if score['total_score'] is not none else '—' }}
+                                </td>
+                                <!-- Overall Result -->
+                                <td style="padding: 14px 16px; text-align: center;">
+                                    {% if score['overall_status'] == 'PASS' %}
+                                        <span class="badge badge-success" style="font-size: 12px; padding: 4px 10px;">
+                                            <i class="fas fa-check-circle"></i> PASSED
+                                        </span>
+                                    {% elif score['overall_status'] == 'FAIL' %}
+                                        <span class="badge badge-danger" style="font-size: 12px; padding: 4px 10px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+                                            <i class="fas fa-times-circle"></i> FAILED
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-warning" style="font-size: 11px; padding: 4px 8px;">
+                                            Pending
+                                        </span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
+                                <td colspan="9" style="text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px;">
                                     <i class="fas fa-clipboard" style="font-size: 28px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
-                                    No Internal Assessment (IA) marks published yet for your courses.
+                                    No Internal Assessment marks published yet for your courses.
                                 </td>
                             </tr>
                         {% endif %}
