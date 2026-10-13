@@ -1,0 +1,164 @@
+/* SIAMS Design System - theme.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root,
+[data-theme='light'] {
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Primary brand gradients & colors */
+  --primary-gradient: linear-gradient(135deg, #4338ca 0%, #2563eb 50%, #3b82f6 100%);
+  --primary-gradient-hover: linear-gradient(135deg, #3730a3 0%, #1d4ed8 50%, #2563eb 100%);
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --primary-border: #bfdbfe;
+  --accent-purple: #818cf8;
+  
+  /* Background colors */
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-input: #ffffff;
+  --bg-input-hover: #f8fafc;
+  --bg-pill: #eef2ff;
+  --border-pill: #c7d2fe;
+  --text-pill: #4338ca;
+  
+  /* Sidebar */
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #94a3b8;
+  --sidebar-hover-bg: #1e293b;
+  --sidebar-active-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --sidebar-border: #1e293b;
+  
+  /* Text colors */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --text-inverse: #ffffff;
+  
+  /* Borders and Dividers */
+  --border-color: #e2e8f0;
+  --border-subtle: #edf2f7;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 14px 0 rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 35px -5px rgba(0, 0, 0, 0.09), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  --shadow-button: 0 8px 20px -4px rgba(37, 99, 235, 0.35);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-card: 16px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+
+  /* Status Colors */
+  --status-success: #10b981;
+  --status-success-bg: #ecfdf5;
+  --status-warning: #f59e0b;
+  --status-warning-bg: #fffbeb;
+  --status-danger: #ef4444;
+  --status-danger-bg: #fef2f2;
+  --status-info: #0ea5e9;
+  --status-info-bg: #f0f9ff;
+}
+
+[data-theme='dark'] {
+  /* Background colors */
+  --bg-page: #0b1120;
+  --bg-card: #151f32;
+  --bg-secondary: #1e293b;
+  --bg-input: #1e293b;
+  --bg-input-hover: #26354a;
+  --bg-pill: #1e1b4b;
+  --border-pill: #3730a3;
+  --text-pill: #a5b4fc;
+  
+  /* Sidebar */
+  --sidebar-bg: #090e17;
+  --sidebar-text: #94a3b8;
+  --sidebar-hover-bg: #151f32;
+  --sidebar-active-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --sidebar-border: #1e293b;
+  
+  /* Text colors */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --text-inverse: #ffffff;
+  
+  /* Borders and Dividers */
+  --border-color: #243048;
+  --border-subtle: #1e293b;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 14px 0 rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 35px -5px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+  --shadow-button: 0 8px 24px -4px rgba(37, 99, 235, 0.45);
+
+  /* Status Colors */
+  --status-success-bg: #064e3b;
+  --status-warning-bg: #78350f;
+  --status-danger-bg: #7f1d1d;
+  --status-info-bg: #0c4a6e;
+}
+
+/* Global Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
